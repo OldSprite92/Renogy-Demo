@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  Armchair, BatteryCharging, Blinds, Camera, Check, ChevronRight, CircleDot,
+  Armchair, ArrowLeft, BatteryCharging, Blinds, Camera, Check, ChevronRight, CircleDot,
   DoorClosed, Droplets, Film, Gauge, Languages, Lamp, Leaf, Lock, MapPin, Moon,
   Power, Radio, RotateCcw, ScanLine, ShieldAlert, ShieldCheck, Siren, Snowflake,
   Sparkles, Sun, TentTree, Thermometer, Tv, Volume2, Waves, Wifi, Wind, X, Zap,
@@ -19,6 +19,8 @@ type DeviceState = { icon: IconName; name: Localized; value: Localized; active: 
 type LoadState = { on: boolean; value: Localized };
 type VisualLoad = { key: LoadKey; icon: LucideIcon; name: Localized; kind?: 'load' | 'sensor'; states: Record<SceneKey, LoadState> };
 type LoadOverrides = Partial<Record<SceneKey, Partial<Record<LoadKey, boolean>>>>;
+type ControlValue = string | number | boolean;
+type DeviceControls = Partial<Record<LoadKey, Record<string, ControlValue>>>;
 type Scene = {
   key: SceneKey; name: Localized; kicker: Localized; message: Localized; ready: Localized;
   time: string; solar: string; load: string; batteryFlow: string; runtime: string;
@@ -242,6 +244,41 @@ const manualLoadValues: Record<LoadKey, { on: Localized; off: Localized }> = {
   'noise-sensor': { on: { en: 'Online', zh: '在线' }, off: { en: 'Offline', zh: '离线' } },
 };
 
+const controlLabels: Record<string, Localized> = {
+  Auto: { en: 'Auto', zh: '自动' }, Cool: { en: 'Cool', zh: '制冷' }, Fan: { en: 'Fan', zh: '送风' }, Sleep: { en: 'Sleep', zh: '睡眠' },
+  Low: { en: 'Low', zh: '低速' }, Medium: { en: 'Medium', zh: '中速' }, High: { en: 'High', zh: '高速' },
+  Streaming: { en: 'Streaming', zh: '流媒体' }, HDMI: { en: 'HDMI', zh: 'HDMI' }, TV: { en: 'TV', zh: '电视' },
+  Cinema: { en: 'Cinema', zh: '影院' }, Standard: { en: 'Standard', zh: '标准' }, Game: { en: 'Game', zh: '游戏' },
+  Quiet: { en: 'Quiet', zh: '静音' }, Boost: { en: 'Boost', zh: '强力' },
+  Warm: { en: 'Warm', zh: '暖光' }, Sunset: { en: 'Sunset', zh: '日落' }, Ocean: { en: 'Ocean', zh: '海洋' }, Violet: { en: 'Violet', zh: '紫罗兰' },
+  Immersive: { en: 'Immersive', zh: '沉浸' }, Music: { en: 'Music', zh: '音乐' }, Night: { en: 'Night', zh: '夜间' },
+  Eco: { en: 'Eco', zh: '节能' }, Balanced: { en: 'Balanced', zh: '均衡' }, Performance: { en: 'Performance', zh: '性能' }, Silent: { en: 'Silent', zh: '静音' },
+  '30 sec': { en: '30 sec', zh: '30秒' }, '1 min': { en: '1 min', zh: '1分钟' }, Off: { en: 'Off', zh: '关闭' },
+};
+
+const controlTextFor = (value: string, locale: Locale) => controlLabels[value]?.[locale] ?? value;
+
+function createSceneControls(scene: SceneKey): DeviceControls {
+  const presets = {
+    camp: { climateMode: 'Auto', target: 23, fan: 'Auto', main: 65, cct: 3200, shade: 100, humid: 48, ambient: 35, ambientColor: 'Warm', volume: 28, audio: 'Immersive', inverter: 'Balanced' },
+    away: { climateMode: 'Auto', target: 27, fan: 'Low', main: 0, cct: 3200, shade: 0, humid: 45, ambient: 0, ambientColor: 'Warm', volume: 0, audio: 'Night', inverter: 'Eco' },
+    movie: { climateMode: 'Cool', target: 22, fan: 'Low', main: 0, cct: 3000, shade: 0, humid: 48, ambient: 30, ambientColor: 'Violet', volume: 42, audio: 'Immersive', inverter: 'Performance' },
+    sleep: { climateMode: 'Sleep', target: 24, fan: 'Low', main: 0, cct: 2700, shade: 0, humid: 48, ambient: 15, ambientColor: 'Warm', volume: 0, audio: 'Night', inverter: 'Silent' },
+  }[scene];
+
+  return {
+    climate: { mode: presets.climateMode, target: presets.target, fan: presets.fan },
+    lights: { brightness: presets.main, colorTemperature: presets.cct },
+    shades: { position: presets.shade },
+    tv: { source: 'Streaming', picture: scene === 'movie' ? 'Cinema' : 'Standard' },
+    humidifier: { targetHumidity: presets.humid, mode: scene === 'sleep' ? 'Quiet' : 'Auto' },
+    ambient: { brightness: presets.ambient, color: presets.ambientColor },
+    audio: { volume: presets.volume, profile: presets.audio },
+    inverter: { mode: presets.inverter, outputLimit: scene === 'away' ? 600 : 1800 },
+    lock: { autoLock: scene === 'away' || scene === 'sleep' ? '30 sec' : 'Off' },
+  };
+}
+
 export default function Home() {
   const [locale, setLocale] = useState<Locale>('en');
   const [activeScene, setActiveScene] = useState<SceneKey>('camp');
@@ -249,6 +286,8 @@ export default function Home() {
   const [intrusion, setIntrusion] = useState(false);
   const [loadSheetOpen, setLoadSheetOpen] = useState(false);
   const [loadOverrides, setLoadOverrides] = useState<LoadOverrides>({});
+  const [selectedLoadKey, setSelectedLoadKey] = useState<LoadKey | null>(null);
+  const [deviceControls, setDeviceControls] = useState<DeviceControls>(() => createSceneControls('camp'));
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const current = scenes[activeScene];
   const preview = scenes[pendingScene ?? activeScene];
@@ -256,9 +295,25 @@ export default function Home() {
   const pick = (value: Localized) => value[locale];
   const getLoadState = (load: VisualLoad, scene: SceneKey = activeScene): LoadState => {
     const override = loadOverrides[scene]?.[load.key];
-    if (typeof override !== 'boolean') return load.states[scene];
-    if (override && load.kind === 'sensor') return load.states[scene];
-    return { on: override, value: manualLoadValues[load.key][override ? 'on' : 'off'] };
+    const base = typeof override !== 'boolean'
+      ? load.states[scene]
+      : override && load.kind === 'sensor'
+        ? load.states[scene]
+        : { on: override, value: manualLoadValues[load.key][override ? 'on' : 'off'] };
+    if (!base.on || load.kind === 'sensor') return base;
+    const controls = deviceControls[load.key] ?? {};
+    const localized = (en: string, zh: string): LoadState => ({ on: true, value: { en, zh } });
+    switch (load.key) {
+      case 'climate': return localized(`${controlTextFor(String(controls.mode), 'en')} · ${controls.target}°C`, `${controlTextFor(String(controls.mode), 'zh')} · ${controls.target}°C`);
+      case 'lights': return localized(`${Number(controls.colorTemperature) <= 3300 ? 'Warm' : Number(controls.colorTemperature) >= 5000 ? 'Cool' : 'Neutral'} · ${controls.brightness}%`, `${Number(controls.colorTemperature) <= 3300 ? '暖光' : Number(controls.colorTemperature) >= 5000 ? '冷光' : '中性光'} · ${controls.brightness}%`);
+      case 'shades': return Number(controls.position) === 100 ? localized('Open', '已打开') : Number(controls.position) === 0 ? localized('Closed', '已关闭') : localized(`${controls.position}% open`, `开启${controls.position}%`);
+      case 'tv': return localized(`${controlTextFor(String(controls.source), 'en')} · On`, `${controlTextFor(String(controls.source), 'zh')} · 已开启`);
+      case 'humidifier': return localized(`${controlTextFor(String(controls.mode), 'en')} · ${controls.targetHumidity}%`, `${controlTextFor(String(controls.mode), 'zh')} · ${controls.targetHumidity}%`);
+      case 'ambient': return localized(`${controlTextFor(String(controls.color), 'en')} · ${controls.brightness}%`, `${controlTextFor(String(controls.color), 'zh')} · ${controls.brightness}%`);
+      case 'audio': return localized(`${controlTextFor(String(controls.profile), 'en')} · ${controls.volume}%`, `${controlTextFor(String(controls.profile), 'zh')} · ${controls.volume}%`);
+      case 'inverter': return localized(controlTextFor(String(controls.mode), 'en'), controlTextFor(String(controls.mode), 'zh'));
+      default: return base;
+    }
   };
   const getLoadByKey = (key: LoadKey) => getLoadState(visualLoads.find(load => load.key === key)!);
   const cabinLoads = visualLoads.filter(load => load.kind !== 'sensor');
@@ -278,6 +333,7 @@ export default function Home() {
   const noiseSensor = getLoadByKey('noise-sensor');
   const onlineSensorCount = sensorDevices.filter(load => getLoadState(load).on).length;
   const temperatureReading = pick(temperatureSensor.value).replace('°C', '');
+  const selectedLoad = selectedLoadKey ? visualLoads.find(load => load.key === selectedLoadKey) ?? null : null;
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
   const sceneStatus = intrusion
@@ -288,7 +344,9 @@ export default function Home() {
     if (key === activeScene && !pendingScene) return;
     if (timer.current) clearTimeout(timer.current);
     setLoadOverrides({});
+    setDeviceControls(createSceneControls(key));
     setLoadSheetOpen(false);
+    setSelectedLoadKey(null);
     setIntrusion(false);
     setPendingScene(key);
     timer.current = setTimeout(() => { setActiveScene(key); setPendingScene(null); }, 980);
@@ -296,16 +354,36 @@ export default function Home() {
 
   function resetDemo() {
     if (timer.current) clearTimeout(timer.current);
-    setPendingScene(null); setIntrusion(false); setActiveScene('camp'); setLoadOverrides({}); setLoadSheetOpen(false);
+    setPendingScene(null); setIntrusion(false); setActiveScene('camp'); setLoadOverrides({}); setDeviceControls(createSceneControls('camp')); setSelectedLoadKey(null); setLoadSheetOpen(false);
   }
 
   function toggleLoad(load: VisualLoad) {
+    if (load.kind === 'sensor') return;
     const next = !getLoadState(load).on;
     setLoadOverrides(previous => ({ ...previous, [activeScene]: { ...previous[activeScene], [load.key]: next } }));
   }
 
+  function setLoadPower(load: VisualLoad, on: boolean) {
+    if (load.kind === 'sensor') return;
+    setLoadOverrides(previous => ({ ...previous, [activeScene]: { ...previous[activeScene], [load.key]: on } }));
+  }
+
+  function updateDeviceControl(key: LoadKey, field: string, value: ControlValue) {
+    setDeviceControls(previous => ({ ...previous, [key]: { ...previous[key], [field]: value } }));
+    if (key === 'shades' && field === 'position') {
+      const opened = Number(value) > 0;
+      const load = visualLoads.find(item => item.key === key)!;
+      setLoadPower(load, opened);
+    }
+  }
+
+  function handleSheetOpenChange(open: boolean) {
+    setLoadSheetOpen(open);
+    if (!open) setSelectedLoadKey(null);
+  }
+
   return (
-    <Sheet open={loadSheetOpen} onOpenChange={setLoadSheetOpen}>
+    <Sheet open={loadSheetOpen} onOpenChange={handleSheetOpenChange}>
     <main className={`app-shell scene-${activeScene} ${intrusion ? 'is-alert' : ''}`}>
       <header className="topbar">
         <div className="brand-lockup">
@@ -484,23 +562,130 @@ export default function Home() {
         <div className="sheet-grabber" aria-hidden="true" />
         <SheetHeader className="load-sheet-header">
           <div>
-            <span className="eyebrow">{locale === 'en' ? 'LIVE SCENE STATUS' : '当前场景状态'}</span>
-            <SheetTitle>{pick(current.name)} {locale === 'en' ? 'Mode · All devices' : '模式 · 全部设备'}</SheetTitle>
-            <SheetDescription>{locale === 'en' ? `${cabinLoads.length} loads · ${onlineSensorCount}/${sensorDevices.length} sensors online · Tap a device to change status` : `${cabinLoads.length}项负载 · ${onlineSensorCount}/${sensorDevices.length}个传感器在线 · 点击设备可切换状态`}</SheetDescription>
+            {selectedLoad && <button className="sheet-back-button" type="button" onClick={() => setSelectedLoadKey(null)}><ArrowLeft aria-hidden="true" />{locale === 'en' ? 'All devices' : '全部设备'}</button>}
+            <span className="eyebrow">{selectedLoad ? (selectedLoad.kind === 'sensor' ? (locale === 'en' ? 'LIVE MONITORING' : '实时监测') : (locale === 'en' ? 'DEVICE CONTROL' : '设备控制')) : (locale === 'en' ? 'LIVE SCENE STATUS' : '当前场景状态')}</span>
+            <SheetTitle>{selectedLoad ? pick(selectedLoad.name) : <>{pick(current.name)} {locale === 'en' ? 'Mode · All devices' : '模式 · 全部设备'}</>}</SheetTitle>
+            <SheetDescription>{selectedLoad ? (selectedLoad.kind === 'sensor' ? (locale === 'en' ? 'Always-on sensing device · Read-only monitoring' : '常驻感知设备 · 仅支持查看监测数据') : (locale === 'en' ? 'Adjust this device without leaving the current scene' : '调整设备后将立即回写当前场景')) : (locale === 'en' ? `${cabinLoads.length} loads · ${onlineSensorCount}/${sensorDevices.length} sensors online · Select a device for controls` : `${cabinLoads.length}项负载 · ${onlineSensorCount}/${sensorDevices.length}个传感器在线 · 选择设备进入专属控制`)}</SheetDescription>
           </div>
           <SheetClose className="sheet-close-button" aria-label={locale === 'en' ? 'Close device status' : '关闭设备状态'}><X aria-hidden="true" /></SheetClose>
         </SheetHeader>
-        <div className="sheet-load-grid" aria-label={locale === 'en' ? 'All RV device controls' : '全部房车设备控制'}>
-          {visualLoads.map(load => {
-            const LoadIcon = load.icon;
-            const state = getLoadState(load);
-            return <button className={`sheet-load-card ${load.kind === 'sensor' ? 'is-sensor' : ''} ${state.on ? 'is-on' : 'is-off'}`} type="button" key={load.key} aria-pressed={state.on} onClick={() => toggleLoad(load)}><span className="sheet-load-icon"><LoadIcon aria-hidden="true" /></span><span className="sheet-load-copy"><strong>{pick(load.name)}</strong><small>{pick(state.value)}</small></span><span className="sheet-state-badge">{load.kind === 'sensor' ? (state.on ? (locale === 'en' ? 'ONLINE' : '在线') : (locale === 'en' ? 'OFFLINE' : '离线')) : (state.on ? (locale === 'en' ? 'ACTIVE' : '运行') : (locale === 'en' ? 'OFF / STANDBY' : '关闭 / 待机'))}</span></button>;
-          })}
-        </div>
+        {selectedLoad ? (
+          <DeviceControlPanel
+            device={selectedLoad}
+            state={getLoadState(selectedLoad)}
+            controls={deviceControls[selectedLoad.key] ?? {}}
+            locale={locale}
+            onToggle={() => toggleLoad(selectedLoad)}
+            onPower={on => setLoadPower(selectedLoad, on)}
+            onUpdate={(field, value) => updateDeviceControl(selectedLoad.key, field, value)}
+          />
+        ) : (
+          <div className="sheet-load-grid" aria-label={locale === 'en' ? 'All RV device controls' : '全部房车设备控制'}>
+            {visualLoads.map(load => {
+              const LoadIcon = load.icon;
+              const state = getLoadState(load);
+              return <button className={`sheet-load-card ${load.kind === 'sensor' ? 'is-sensor' : ''} ${state.on ? 'is-on' : 'is-off'}`} type="button" key={load.key} onClick={() => setSelectedLoadKey(load.key)}><span className="sheet-load-icon"><LoadIcon aria-hidden="true" /></span><span className="sheet-load-copy"><strong>{pick(load.name)}</strong><small>{pick(state.value)}</small></span><span className="sheet-state-badge">{load.kind === 'sensor' ? (locale === 'en' ? 'MONITORING' : '监测中') : (state.on ? (locale === 'en' ? 'ACTIVE' : '运行') : (locale === 'en' ? 'OFF / STANDBY' : '关闭 / 待机'))}</span><ChevronRight className="sheet-card-chevron" aria-hidden="true" /></button>;
+            })}
+          </div>
+        )}
       </SheetContent>
     </main>
     </Sheet>
   );
+}
+
+function DeviceControlPanel({ device, state, controls, locale, onToggle, onPower, onUpdate }: {
+  device: VisualLoad;
+  state: LoadState;
+  controls: Record<string, ControlValue>;
+  locale: Locale;
+  onToggle: () => void;
+  onPower: (on: boolean) => void;
+  onUpdate: (field: string, value: ControlValue) => void;
+}) {
+  const t = (en: string, zh: string) => locale === 'en' ? en : zh;
+  const numberValue = (field: string, fallback: number) => Number(controls[field] ?? fallback);
+  const stringValue = (field: string, fallback: string) => String(controls[field] ?? fallback);
+  const DeviceIcon = device.icon;
+
+  if (device.kind === 'sensor') {
+    const sensorMetrics = device.key === 'temperature-sensor' ? [
+      [t('Current reading', '当前温度'), state.value[locale]],
+      [t('Accuracy', '测量精度'), '±0.3°C'],
+      [t('Sampling', '采样周期'), t('Every 5 sec', '每5秒')],
+      [t('Installed at', '安装位置'), t('Cabin ceiling', '舱内顶部')],
+    ] : device.key === 'air-sensor' ? [
+      ['CO₂', state.value[locale].match(/CO₂\s[\d]+\sppm/)?.[0].replace('CO₂ ', '') ?? '650 ppm'],
+      ['TVOC', '0.18 mg/m³'],
+      ['PM2.5', '8 μg/m³'],
+      [t('Sampling', '采样周期'), t('Every 10 sec', '每10秒')],
+    ] : [
+      [t('Current level', '当前噪声'), state.value[locale]],
+      [t('15 min average', '15分钟平均'), '25 dB'],
+      [t('Peak', '峰值'), '38 dB'],
+      [t('Privacy', '隐私模式'), t('No audio stored', '不保存录音')],
+    ];
+    return (
+      <section className="device-control-panel sensor-monitor" aria-label={`${device.name[locale]} ${t('monitoring details', '监测详情')}`}>
+        <div className="device-control-summary">
+          <span className="device-control-icon"><DeviceIcon aria-hidden="true" /></span>
+          <div><small>{t('SYSTEM MANAGED', '系统托管')}</small><strong>{state.value[locale]}</strong><span>{t('Online · Continuous monitoring', '在线 · 持续监测')}</span></div>
+          <span className="monitoring-badge"><Radio aria-hidden="true" />{t('MONITORING', '监测中')}</span>
+        </div>
+        <div className="sensor-metric-grid">
+          {sensorMetrics.map(([label, value]) => <div className="sensor-metric" key={label}><span>{label}</span><strong>{value}</strong></div>)}
+        </div>
+        <div className="sensor-readonly-note"><ShieldCheck aria-hidden="true" /><span><strong>{t('Always-on sensing', '常驻感知')}</strong>{t('This sensor cannot be switched off from a scene. Maintenance and calibration are managed at system level.', '传感器不支持在场景中关闭，维护与校准由系统级统一管理。')}</span></div>
+      </section>
+    );
+  }
+
+  const controlBody = (() => {
+    switch (device.key) {
+      case 'climate':
+        return <><SegmentedControl label={t('Operating mode', '运行模式')} options={['Auto', 'Cool', 'Fan', 'Sleep']} value={stringValue('mode', 'Auto')} locale={locale} onChange={value => onUpdate('mode', value)} /><RangeControl label={t('Target temperature', '目标温度')} value={numberValue('target', 23)} min={16} max={30} unit="°C" onChange={value => onUpdate('target', value)} /><SegmentedControl label={t('Fan speed', '风速')} options={['Auto', 'Low', 'Medium', 'High']} value={stringValue('fan', 'Auto')} locale={locale} onChange={value => onUpdate('fan', value)} /></>;
+      case 'lights':
+        return <><RangeControl label={t('Brightness', '亮度')} value={numberValue('brightness', 65)} min={1} max={100} unit="%" onChange={value => onUpdate('brightness', value)} /><RangeControl label={t('Color temperature', '色温')} value={numberValue('colorTemperature', 3200)} min={2700} max={6500} step={100} unit="K" onChange={value => onUpdate('colorTemperature', value)} gradient="temperature" /></>;
+      case 'shades':
+        return <><div className="control-group"><span className="control-label">{t('Quick position', '快捷位置')}</span><div className="control-actions"><button className={numberValue('position', 0) === 100 ? 'is-selected' : ''} type="button" onClick={() => { onPower(true); onUpdate('position', 100); }}>{t('Open', '全开')}</button><button className={numberValue('position', 0) === 50 ? 'is-selected' : ''} type="button" onClick={() => { onPower(true); onUpdate('position', 50); }}>{t('Half', '半开')}</button><button className={numberValue('position', 0) === 0 ? 'is-selected' : ''} type="button" onClick={() => { onPower(false); onUpdate('position', 0); }}>{t('Close', '关闭')}</button></div></div><RangeControl label={t('Opening position', '开启位置')} value={numberValue('position', 0)} min={0} max={100} unit="%" onChange={value => onUpdate('position', value)} /></>;
+      case 'tv':
+        return <><SegmentedControl label={t('Input source', '输入源')} options={['Streaming', 'HDMI', 'TV']} value={stringValue('source', 'Streaming')} locale={locale} onChange={value => onUpdate('source', value)} /><SegmentedControl label={t('Picture preset', '画面模式')} options={['Cinema', 'Standard', 'Game']} value={stringValue('picture', 'Standard')} locale={locale} onChange={value => onUpdate('picture', value)} /></>;
+      case 'humidifier':
+        return <><RangeControl label={t('Target humidity', '目标湿度')} value={numberValue('targetHumidity', 48)} min={35} max={70} unit="%" onChange={value => onUpdate('targetHumidity', value)} /><SegmentedControl label={t('Humidification mode', '加湿模式')} options={['Auto', 'Quiet', 'Boost']} value={stringValue('mode', 'Auto')} locale={locale} onChange={value => onUpdate('mode', value)} /></>;
+      case 'ambient': {
+        const colors = [{ key: 'Warm', hex: '#ffc680' }, { key: 'Sunset', hex: '#ff8d68' }, { key: 'Ocean', hex: '#62d5e8' }, { key: 'Violet', hex: '#a78bfa' }];
+        return <><RangeControl label={t('Brightness', '亮度')} value={numberValue('brightness', 35)} min={1} max={100} unit="%" onChange={value => onUpdate('brightness', value)} /><div className="control-group"><span className="control-label">{t('Light color', '灯光颜色')}</span><div className="color-presets">{colors.map(color => <button type="button" key={color.key} className={stringValue('color', 'Warm') === color.key ? 'is-selected' : ''} aria-pressed={stringValue('color', 'Warm') === color.key} onClick={() => onUpdate('color', color.key)}><span style={{ background: color.hex }} />{controlTextFor(color.key, locale)}</button>)}</div></div></>;
+      }
+      case 'audio':
+        return <><RangeControl label={t('Volume', '音量')} value={numberValue('volume', 28)} min={0} max={100} unit="%" onChange={value => onUpdate('volume', value)} /><SegmentedControl label={t('Sound profile', '声场模式')} options={['Immersive', 'Music', 'Night']} value={stringValue('profile', 'Immersive')} locale={locale} onChange={value => onUpdate('profile', value)} /></>;
+      case 'inverter':
+        return <><SegmentedControl label={t('Power strategy', '供电策略')} options={['Eco', 'Balanced', 'Performance', 'Silent']} value={stringValue('mode', 'Balanced')} locale={locale} onChange={value => onUpdate('mode', value)} /><RangeControl label={t('AC output limit', 'AC输出上限')} value={numberValue('outputLimit', 1800)} min={300} max={3000} step={100} unit="W" onChange={value => onUpdate('outputLimit', value)} /></>;
+      case 'lock':
+        return <><div className="control-group"><span className="control-label">{t('Door status', '门锁状态')}</span><div className="control-actions two-up"><button className={state.on ? 'is-selected' : ''} type="button" onClick={() => onPower(true)}><Lock aria-hidden="true" />{t('Lock', '上锁')}</button><button className={!state.on ? 'is-selected' : ''} type="button" onClick={() => onPower(false)}><DoorClosed aria-hidden="true" />{t('Unlock', '解锁')}</button></div></div><SegmentedControl label={t('Auto-lock delay', '自动上锁延时')} options={['30 sec', '1 min', 'Off']} value={stringValue('autoLock', 'Off')} locale={locale} onChange={value => onUpdate('autoLock', value)} /></>;
+      default:
+        return <div className="control-empty">{t('No additional controls', '暂无更多控制项')}</div>;
+    }
+  })();
+
+  const hidesPower = device.key === 'shades' || device.key === 'lock';
+  return (
+    <section className="device-control-panel" aria-label={`${device.name[locale]} ${t('controls', '控制')}`}>
+      <div className="device-control-summary">
+        <span className="device-control-icon"><DeviceIcon aria-hidden="true" /></span>
+        <div><small>{t('CURRENT STATE', '当前状态')}</small><strong aria-live="polite">{state.value[locale]}</strong><span>{t('Changes apply immediately to this scene', '修改将立即应用到当前场景')}</span></div>
+        {!hidesPower && <button className={`device-power-button ${state.on ? 'is-on' : ''}`} type="button" aria-pressed={state.on} onClick={onToggle}><Power aria-hidden="true" />{state.on ? t('Turn off', '关闭') : t('Turn on', '开启')}</button>}
+      </div>
+      <div className={`device-control-fields ${state.on || hidesPower ? '' : 'is-disabled'}`}>{controlBody}</div>
+    </section>
+  );
+}
+
+function SegmentedControl({ label, options, value, locale, onChange }: { label: string; options: string[]; value: string; locale: Locale; onChange: (value: string) => void }) {
+  return <div className="control-group"><span className="control-label">{label}</span><div className="segmented-control">{options.map(option => <button type="button" key={option} className={value === option ? 'is-selected' : ''} aria-pressed={value === option} onClick={() => onChange(option)}>{controlTextFor(option, locale)}</button>)}</div></div>;
+}
+
+function RangeControl({ label, value, min, max, step = 1, unit, gradient, onChange }: { label: string; value: number; min: number; max: number; step?: number; unit: string; gradient?: 'temperature'; onChange: (value: number) => void }) {
+  return <label className="range-control"><span className="control-label">{label}<strong>{value}{unit}</strong></span><input className={gradient === 'temperature' ? 'temperature-range' : ''} type="range" min={min} max={max} step={step} value={value} onChange={event => onChange(Number(event.target.value))} /><span className="range-bounds"><small>{min}{unit}</small><small>{max}{unit}</small></span></label>;
 }
 
 function Metric({ icon: Icon, label, value, tone }: { icon: LucideIcon; label: string; value: string; tone: string }) {
