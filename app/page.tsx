@@ -12,8 +12,11 @@ import { useEffect, useRef, useState } from 'react';
 type Locale = 'en' | 'zh';
 type SceneKey = 'camp' | 'away' | 'movie' | 'sleep';
 type IconName = 'lamp' | 'climate' | 'tv' | 'audio' | 'humidifier' | 'inverter' | 'lock' | 'blinds';
+type LoadKey = 'climate' | 'lights' | 'shades' | 'tv' | 'humidifier' | 'ambient' | 'audio' | 'inverter' | 'lock';
 type Localized = { en: string; zh: string };
 type DeviceState = { icon: IconName; name: Localized; value: Localized; active: boolean };
+type LoadState = { on: boolean; value: Localized };
+type VisualLoad = { key: LoadKey; icon: LucideIcon; name: Localized; states: Record<SceneKey, LoadState> };
 type Scene = {
   key: SceneKey; name: Localized; kicker: Localized; message: Localized; ready: Localized;
   time: string; solar: string; load: string; batteryFlow: string; runtime: string;
@@ -56,14 +59,14 @@ const scenes: Record<SceneKey, Scene> = {
     runtime: '72 h+', temperature: '27°', inverter: { en: 'Eco', zh: '节能模式' },
     security: true, sceneIcon: ShieldCheck,
     steps: [
+      { en: 'Climate and cabin loads off', zh: '空调及舱内负载已关闭' },
       { en: 'Doors and windows secured', zh: '门窗已锁定' },
-      { en: 'Exterior cameras online', zh: '车外摄像头已上线' },
-      { en: 'Solar priority enabled', zh: '已启用太阳能优先' },
+      { en: 'Cameras and solar priority on', zh: '摄像头与太阳能优先已开启' },
     ],
     devices: [
       { icon: 'lock', name: { en: 'Smart lock', zh: '智能门锁' }, value: { en: 'Locked', zh: '已上锁' }, active: true },
       { icon: 'lamp', name: { en: 'Cabin lights', zh: '舱内灯光' }, value: { en: 'Off', zh: '已关闭' }, active: false },
-      { icon: 'climate', name: { en: 'Climate', zh: '空调' }, value: { en: 'Eco · 27°C', zh: '节能 · 27°C' }, active: true },
+      { icon: 'climate', name: { en: 'Climate', zh: '空调' }, value: { en: 'Powered off', zh: '已关闭' }, active: false },
       { icon: 'inverter', name: { en: 'Inverter', zh: '逆变器' }, value: { en: 'Eco', zh: '节能模式' }, active: true },
     ],
   },
@@ -111,6 +114,90 @@ const scenes: Record<SceneKey, Scene> = {
 
 const sceneOrder: SceneKey[] = ['camp', 'away', 'movie', 'sleep'];
 
+const visualLoads: VisualLoad[] = [
+  {
+    key: 'climate', icon: Wind, name: { en: 'Climate', zh: '空调' },
+    states: {
+      camp: { on: true, value: { en: 'Auto · 23°C', zh: '自动 · 23°C' } },
+      away: { on: false, value: { en: 'Off', zh: '已关闭' } },
+      movie: { on: true, value: { en: 'Low · 22°C', zh: '低风 · 22°C' } },
+      sleep: { on: true, value: { en: 'Sleep · 24°C', zh: '睡眠 · 24°C' } },
+    },
+  },
+  {
+    key: 'lights', icon: Lamp, name: { en: 'Main lights', zh: '主灯' },
+    states: {
+      camp: { on: true, value: { en: 'Warm · 65%', zh: '暖光 · 65%' } },
+      away: { on: false, value: { en: 'Off', zh: '已关闭' } },
+      movie: { on: false, value: { en: 'Off', zh: '已关闭' } },
+      sleep: { on: false, value: { en: 'Off', zh: '已关闭' } },
+    },
+  },
+  {
+    key: 'shades', icon: Blinds, name: { en: 'Smart shades', zh: '智能遮阳帘' },
+    states: {
+      camp: { on: false, value: { en: 'Open', zh: '已打开' } },
+      away: { on: true, value: { en: 'Closed', zh: '已关闭' } },
+      movie: { on: true, value: { en: 'Closed', zh: '已关闭' } },
+      sleep: { on: true, value: { en: 'Closed', zh: '已关闭' } },
+    },
+  },
+  {
+    key: 'tv', icon: Tv, name: { en: 'Entertainment', zh: '影音系统' },
+    states: {
+      camp: { on: false, value: { en: 'Standby', zh: '待机' } },
+      away: { on: false, value: { en: 'Off', zh: '已关闭' } },
+      movie: { on: true, value: { en: 'Cinema', zh: '影院模式' } },
+      sleep: { on: false, value: { en: 'Off', zh: '已关闭' } },
+    },
+  },
+  {
+    key: 'humidifier', icon: Droplets, name: { en: 'Humidifier', zh: '加湿器' },
+    states: {
+      camp: { on: false, value: { en: 'Standby', zh: '待机' } },
+      away: { on: false, value: { en: 'Off', zh: '已关闭' } },
+      movie: { on: false, value: { en: 'Standby', zh: '待机' } },
+      sleep: { on: true, value: { en: 'Auto · 48%', zh: '自动 · 48%' } },
+    },
+  },
+  {
+    key: 'ambient', icon: Sparkles, name: { en: 'Ambient', zh: '氛围灯' },
+    states: {
+      camp: { on: true, value: { en: 'Welcome · 35%', zh: '迎宾 · 35%' } },
+      away: { on: false, value: { en: 'Off', zh: '已关闭' } },
+      movie: { on: true, value: { en: 'Cinema · 30%', zh: '影院 · 30%' } },
+      sleep: { on: true, value: { en: 'Night · 15%', zh: '夜灯 · 15%' } },
+    },
+  },
+  {
+    key: 'audio', icon: Volume2, name: { en: 'Spatial audio', zh: '空间音响' },
+    states: {
+      camp: { on: false, value: { en: 'Standby', zh: '待机' } },
+      away: { on: false, value: { en: 'Off', zh: '已关闭' } },
+      movie: { on: true, value: { en: 'Immersive', zh: '沉浸模式' } },
+      sleep: { on: false, value: { en: 'Off', zh: '已关闭' } },
+    },
+  },
+  {
+    key: 'inverter', icon: Zap, name: { en: 'Inverter', zh: '逆变器' },
+    states: {
+      camp: { on: true, value: { en: 'Balanced', zh: '均衡模式' } },
+      away: { on: true, value: { en: 'Eco', zh: '节能模式' } },
+      movie: { on: true, value: { en: 'Performance', zh: '性能模式' } },
+      sleep: { on: true, value: { en: 'Silent', zh: '静音模式' } },
+    },
+  },
+  {
+    key: 'lock', icon: Lock, name: { en: 'Entry lock', zh: '入户门锁' },
+    states: {
+      camp: { on: false, value: { en: 'Unlocked', zh: '已解锁' } },
+      away: { on: true, value: { en: 'Secured', zh: '已锁定' } },
+      movie: { on: false, value: { en: 'Unlocked', zh: '已解锁' } },
+      sleep: { on: true, value: { en: 'Night lock', zh: '夜间锁定' } },
+    },
+  },
+];
+
 export default function Home() {
   const [locale, setLocale] = useState<Locale>('en');
   const [activeScene, setActiveScene] = useState<SceneKey>('camp');
@@ -121,6 +208,12 @@ export default function Home() {
   const preview = scenes[pendingScene ?? activeScene];
   const PreviewIcon = preview.sceneIcon;
   const pick = (value: Localized) => value[locale];
+  const climateOn = activeScene !== 'away';
+  const mainLightsOn = activeScene === 'camp';
+  const ambientOn = activeScene !== 'away';
+  const shadesClosed = activeScene !== 'camp';
+  const cinemaOn = activeScene === 'movie';
+  const humidifierOn = activeScene === 'sleep';
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
   const sceneStatus = intrusion
@@ -196,9 +289,35 @@ export default function Home() {
               <span><Wind aria-hidden="true" /> {locale === 'en' ? 'Air quality excellent' : '空气质量优'}</span>
               <span><Waves aria-hidden="true" /> {locale === 'en' ? '28 dB inside' : '舱内28分贝'}</span>
             </div>
-            <Hotspot className="hotspot-bed" icon={Moon} label={activeScene === 'sleep' ? (locale === 'en' ? 'Sleep climate' : '睡眠环境') : (locale === 'en' ? 'Rest zone' : '休息区')} active={activeScene === 'sleep'} />
-            <Hotspot className="hotspot-kitchen" icon={Zap} label={locale === 'en' ? 'Smart load' : '智能负载'} active={activeScene === 'camp'} />
-            <Hotspot className="hotspot-lounge" icon={Film} label={locale === 'en' ? 'Cinema' : '影院模式'} active={activeScene === 'movie'} />
+            <div className="rv-state-effects" aria-hidden="true">
+              <div className={`main-light-effect ${mainLightsOn ? 'is-running' : 'is-stopped'}`}><span /><span /><span /></div>
+              <div className={`airflow-effect ${climateOn ? 'is-running' : 'is-stopped'} airflow-${activeScene}`}><span /><span /><span /></div>
+              <div className={`shade-effect ${shadesClosed ? 'is-closed' : 'is-open'}`}><span /><span /><span /><span /></div>
+              <div className={`screen-effect ${cinemaOn ? 'is-running' : 'is-stopped'}`}><Film /></div>
+              <div className={`audio-effect ${cinemaOn ? 'is-running' : 'is-stopped'}`}><span /><span /><span /></div>
+              <div className={`mist-effect ${humidifierOn ? 'is-running' : 'is-stopped'}`}><span /><span /><span /></div>
+              <div className={`ambient-effect ${ambientOn ? 'is-running ambient-${activeScene}' : 'is-stopped'}`}><span /><span /></div>
+              <div className={`power-effect power-${activeScene}`}><span /><span /><span /></div>
+            </div>
+            <div className="vehicle-load-layer" role="list" aria-label={locale === 'en' ? 'Appliances and current states inside the RV' : '房车内负载电器及当前状态'}>
+              {visualLoads.map((load, index) => {
+                const LoadIcon = load.icon;
+                const state = load.states[activeScene];
+                return (
+                  <div
+                    key={`${activeScene}-${load.key}`}
+                    className={`load-node load-${load.key} ${state.on ? 'is-on' : 'is-off'}`}
+                    role="listitem"
+                    style={{ animationDelay: `${index * 48}ms` }}
+                    aria-label={`${pick(load.name)}: ${pick(state.value)}`}
+                  >
+                    <span className="load-node-icon"><LoadIcon aria-hidden="true" /></span>
+                    <span className="load-node-copy"><strong>{pick(load.name)}</strong><small>{pick(state.value)}</small></span>
+                    <span className="load-state-dot" aria-hidden="true" />
+                  </div>
+                );
+              })}
+            </div>
             <div className="automation-card">
               <div className="automation-icon"><Sparkles aria-hidden="true" /></div>
               <div className="automation-copy"><small>{locale === 'en' ? 'RENOGY AI AUTOMATION' : 'RENOGY AI 自动化'}</small><strong>{sceneStatus}</strong></div>
@@ -275,10 +394,6 @@ export default function Home() {
 
 function Metric({ icon: Icon, label, value, tone }: { icon: LucideIcon; label: string; value: string; tone: string }) {
   return <div className="metric-row"><span className={`metric-icon metric-${tone}`}><Icon aria-hidden="true" /></span><span>{label}</span><strong>{value}</strong></div>;
-}
-
-function Hotspot({ icon: Icon, label, className, active }: { icon: LucideIcon; label: string; className: string; active: boolean }) {
-  return <button className={`hotspot ${className} ${active ? 'is-active' : ''}`} aria-label={label}><span><Icon aria-hidden="true" /></span><small>{label}</small></button>;
 }
 
 function SecurityItem({ icon: Icon, label, state, alert }: { icon: LucideIcon; label: string; state: string; alert: boolean }) {
