@@ -13,11 +13,11 @@ import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTi
 type Locale = 'en' | 'zh';
 type SceneKey = 'camp' | 'away' | 'movie' | 'sleep';
 type IconName = 'lamp' | 'climate' | 'tv' | 'audio' | 'humidifier' | 'inverter' | 'lock' | 'blinds';
-type LoadKey = 'climate' | 'lights' | 'shades' | 'tv' | 'humidifier' | 'ambient' | 'audio' | 'inverter' | 'lock';
+type LoadKey = 'climate' | 'lights' | 'shades' | 'tv' | 'humidifier' | 'ambient' | 'audio' | 'inverter' | 'lock' | 'temperature-sensor' | 'air-sensor' | 'noise-sensor';
 type Localized = { en: string; zh: string };
 type DeviceState = { icon: IconName; name: Localized; value: Localized; active: boolean };
 type LoadState = { on: boolean; value: Localized };
-type VisualLoad = { key: LoadKey; icon: LucideIcon; name: Localized; states: Record<SceneKey, LoadState> };
+type VisualLoad = { key: LoadKey; icon: LucideIcon; name: Localized; kind?: 'load' | 'sensor'; states: Record<SceneKey, LoadState> };
 type LoadOverrides = Partial<Record<SceneKey, Partial<Record<LoadKey, boolean>>>>;
 type Scene = {
   key: SceneKey; name: Localized; kicker: Localized; message: Localized; ready: Localized;
@@ -198,6 +198,33 @@ const visualLoads: VisualLoad[] = [
       sleep: { on: true, value: { en: 'Night lock', zh: '夜间锁定' } },
     },
   },
+  {
+    key: 'temperature-sensor', icon: Thermometer, kind: 'sensor', name: { en: 'Cabin temperature sensor', zh: '舱内温度传感器' },
+    states: {
+      camp: { on: true, value: { en: '23°C', zh: '23°C' } },
+      away: { on: true, value: { en: '27°C', zh: '27°C' } },
+      movie: { on: true, value: { en: '22°C', zh: '22°C' } },
+      sleep: { on: true, value: { en: '24°C', zh: '24°C' } },
+    },
+  },
+  {
+    key: 'air-sensor', icon: Wind, kind: 'sensor', name: { en: 'Air quality sensor', zh: '空气质量传感器' },
+    states: {
+      camp: { on: true, value: { en: 'Excellent · CO₂ 620 ppm', zh: '优 · CO₂ 620 ppm' } },
+      away: { on: true, value: { en: 'Excellent · CO₂ 580 ppm', zh: '优 · CO₂ 580 ppm' } },
+      movie: { on: true, value: { en: 'Excellent · CO₂ 690 ppm', zh: '优 · CO₂ 690 ppm' } },
+      sleep: { on: true, value: { en: 'Excellent · CO₂ 650 ppm', zh: '优 · CO₂ 650 ppm' } },
+    },
+  },
+  {
+    key: 'noise-sensor', icon: Waves, kind: 'sensor', name: { en: 'Cabin noise sensor', zh: '舱内噪声传感器' },
+    states: {
+      camp: { on: true, value: { en: '28 dB', zh: '28分贝' } },
+      away: { on: true, value: { en: '26 dB', zh: '26分贝' } },
+      movie: { on: true, value: { en: '31 dB', zh: '31分贝' } },
+      sleep: { on: true, value: { en: '22 dB', zh: '22分贝' } },
+    },
+  },
 ];
 
 const manualLoadValues: Record<LoadKey, { on: Localized; off: Localized }> = {
@@ -210,6 +237,9 @@ const manualLoadValues: Record<LoadKey, { on: Localized; off: Localized }> = {
   audio: { on: { en: 'Immersive', zh: '沉浸模式' }, off: { en: 'Off', zh: '已关闭' } },
   inverter: { on: { en: 'Manual power', zh: '手动供电' }, off: { en: 'Powered off', zh: '已关闭' } },
   lock: { on: { en: 'Secured', zh: '已锁定' }, off: { en: 'Unlocked', zh: '已解锁' } },
+  'temperature-sensor': { on: { en: 'Online', zh: '在线' }, off: { en: 'Offline', zh: '离线' } },
+  'air-sensor': { on: { en: 'Online', zh: '在线' }, off: { en: 'Offline', zh: '离线' } },
+  'noise-sensor': { on: { en: 'Online', zh: '在线' }, off: { en: 'Offline', zh: '离线' } },
 };
 
 export default function Home() {
@@ -226,9 +256,13 @@ export default function Home() {
   const pick = (value: Localized) => value[locale];
   const getLoadState = (load: VisualLoad, scene: SceneKey = activeScene): LoadState => {
     const override = loadOverrides[scene]?.[load.key];
-    return typeof override === 'boolean' ? { on: override, value: manualLoadValues[load.key][override ? 'on' : 'off'] } : load.states[scene];
+    if (typeof override !== 'boolean') return load.states[scene];
+    if (override && load.kind === 'sensor') return load.states[scene];
+    return { on: override, value: manualLoadValues[load.key][override ? 'on' : 'off'] };
   };
   const getLoadByKey = (key: LoadKey) => getLoadState(visualLoads.find(load => load.key === key)!);
+  const cabinLoads = visualLoads.filter(load => load.kind !== 'sensor');
+  const sensorDevices = visualLoads.filter(load => load.kind === 'sensor');
   const activeLoads = visualLoads.filter(load => getLoadState(load).on);
   const panelActiveLoads = activeLoads.filter(load => load.key !== 'climate');
   const climateOn = getLoadByKey('climate').on;
@@ -239,7 +273,11 @@ export default function Home() {
   const audioOn = getLoadByKey('audio').on;
   const humidifierOn = getLoadByKey('humidifier').on;
   const inverterOn = getLoadByKey('inverter').on;
-  const activeLoadCount = activeLoads.length;
+  const temperatureSensor = getLoadByKey('temperature-sensor');
+  const airSensor = getLoadByKey('air-sensor');
+  const noiseSensor = getLoadByKey('noise-sensor');
+  const onlineSensorCount = sensorDevices.filter(load => getLoadState(load).on).length;
+  const temperatureReading = pick(temperatureSensor.value).replace('°C', '');
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
   const sceneStatus = intrusion
@@ -319,9 +357,9 @@ export default function Home() {
             <div className="hero-vignette" aria-hidden="true" /><div className="hero-sheen" aria-hidden="true" />
             <div className="scene-story"><span className="eyebrow">{pick(current.name).toUpperCase()} MODE</span><h1>{pick(current.kicker)}</h1><p>{pick(current.message)}</p></div>
             <div className="hero-chips">
-              <span><Thermometer aria-hidden="true" /> {current.temperature}C</span>
-              <span><Wind aria-hidden="true" /> {locale === 'en' ? 'Air quality excellent' : '空气质量优'}</span>
-              <span><Waves aria-hidden="true" /> {locale === 'en' ? '28 dB inside' : '舱内28分贝'}</span>
+              <span className={temperatureSensor.on ? '' : 'is-offline'}><Thermometer aria-hidden="true" /> {temperatureSensor.on ? pick(temperatureSensor.value) : (locale === 'en' ? 'Temperature offline' : '温度传感器离线')}</span>
+              <span className={airSensor.on ? '' : 'is-offline'}><Wind aria-hidden="true" /> {airSensor.on ? pick(airSensor.value) : (locale === 'en' ? 'Air sensor offline' : '空气传感器离线')}</span>
+              <span className={noiseSensor.on ? '' : 'is-offline'}><Waves aria-hidden="true" /> {noiseSensor.on ? pick(noiseSensor.value) : (locale === 'en' ? 'Noise sensor offline' : '噪声传感器离线')}</span>
             </div>
             <div className="rv-state-effects" aria-hidden="true">
               <div className={`main-light-effect ${mainLightsOn ? 'is-running' : 'is-stopped'}`}><span /><span /><span /></div>
@@ -350,7 +388,7 @@ export default function Home() {
               <div className={`power-effect power-${activeScene} ${inverterOn ? 'is-running' : 'is-stopped'}`}><span /><span /><span /></div>
             </div>
             <div className="vehicle-load-layer" role="list" aria-label={locale === 'en' ? 'Appliances and current states inside the RV' : '房车内负载电器及当前状态'}>
-              {visualLoads.map((load, index) => {
+              {cabinLoads.map((load, index) => {
                 const LoadIcon = load.icon;
                 const state = getLoadState(load);
                 return (
@@ -372,7 +410,7 @@ export default function Home() {
               <div className="automation-icon"><Sparkles aria-hidden="true" /></div>
               <div className="automation-copy"><small>{locale === 'en' ? 'RENOGY AI AUTOMATION' : 'RENOGY AI 自动化'}</small><strong>{sceneStatus}</strong></div>
               <div className="automation-steps">{current.steps.map(step => <span key={step.en}><Check aria-hidden="true" /> {pick(step)}</span>)}</div>
-              <button className="load-sheet-trigger" onClick={() => setLoadSheetOpen(true)}><span>{locale === 'en' ? 'All loads' : '全部负载'}</span><ChevronRight aria-hidden="true" /></button>
+              <button className="load-sheet-trigger" onClick={() => setLoadSheetOpen(true)}><span>{locale === 'en' ? 'All devices' : '全部设备'}</span><ChevronRight aria-hidden="true" /></button>
             </div>
             {pendingScene && (
               <div className="activation-layer" role="status" aria-live="polite">
@@ -409,22 +447,22 @@ export default function Home() {
                   {intrusion ? <X aria-hidden="true" /> : <ShieldAlert aria-hidden="true" />}
                   {intrusion ? (locale === 'en' ? 'Resolve demo alert' : '解除演示警报') : (locale === 'en' ? 'Simulate motion' : '模拟移动入侵')}
                 </button>
-                <button className="panel-loads-trigger" onClick={() => setLoadSheetOpen(true)}><Power aria-hidden="true" /><span>{locale === 'en' ? `View all ${visualLoads.length} loads` : `查看全部${visualLoads.length}项负载`}</span><ChevronRight aria-hidden="true" /></button>
+                <button className="panel-loads-trigger" onClick={() => setLoadSheetOpen(true)}><Power aria-hidden="true" /><span>{locale === 'en' ? `View all ${visualLoads.length} devices` : `查看全部${visualLoads.length}项设备`}</span><ChevronRight aria-hidden="true" /></button>
               </>
             ) : (
               <>
                 <div className="climate-card">
-                  <div><span>{locale === 'en' ? 'Interior climate' : '舱内环境'}</span><strong>{climateOn ? current.temperature : '--'}<small>{climateOn ? '°C' : (locale === 'en' ? 'OFF' : '关闭')}</small></strong></div>
+                  <div><span>{locale === 'en' ? 'Interior climate' : '舱内环境'}</span><strong>{temperatureSensor.on ? temperatureReading : '--'}<small>{temperatureSensor.on ? '°C' : (locale === 'en' ? 'OFFLINE' : '离线')}</small></strong></div>
                   <div className={`climate-orbit ${climateOn ? '' : 'is-off'}`}><Wind aria-hidden="true" /><span /></div>
-                  <p>{climateOn ? <Check aria-hidden="true" /> : <Power aria-hidden="true" />} {climateOn ? (locale === 'en' ? 'Temperature and air quality are ideal' : '温度与空气质量均处于理想状态') : (locale === 'en' ? 'Climate is manually powered off' : '空调已手动关闭')}</p>
+                  <p>{temperatureSensor.on && airSensor.on ? <Check aria-hidden="true" /> : <Radio aria-hidden="true" />} {temperatureSensor.on && airSensor.on ? (locale === 'en' ? 'Temperature and air quality sensors are online' : '温度与空气质量传感器在线') : (locale === 'en' ? 'One or more environment sensors are offline' : '环境传感器存在离线')}</p>
                 </div>
-                <div className="active-load-heading"><span>{locale === 'en' ? 'Active loads' : '已开启负载'}</span><strong>{activeLoads.length}</strong></div>
+                <div className="active-load-heading"><span>{locale === 'en' ? 'Active devices' : '运行中设备'}</span><strong>{activeLoads.length}</strong></div>
                 {panelActiveLoads.length ? <div className="device-list active-load-list">{panelActiveLoads.map(load => {
                   const DeviceIcon = load.icon;
                   const state = getLoadState(load);
                   return <div className="device-row" key={load.key}><span className="device-icon is-on"><DeviceIcon aria-hidden="true" /></span><div><strong>{pick(load.name)}</strong><small>{pick(state.value)}</small></div><span className="device-state is-on">{locale === 'en' ? 'ON' : '开'}</span></div>;
-                })}</div> : activeLoads.length === 0 ? <div className="loads-empty"><Power aria-hidden="true" /><span>{locale === 'en' ? 'All cabin loads are off' : '所有舱内负载均已关闭'}</span></div> : null}
-                <button className="panel-loads-trigger" onClick={() => setLoadSheetOpen(true)}><Power aria-hidden="true" /><span>{locale === 'en' ? `View all ${visualLoads.length} loads` : `查看全部${visualLoads.length}项负载`}</span><ChevronRight aria-hidden="true" /></button>
+                })}</div> : activeLoads.length === 0 ? <div className="loads-empty"><Power aria-hidden="true" /><span>{locale === 'en' ? 'All cabin devices are offline' : '所有舱内设备均已离线'}</span></div> : null}
+                <button className="panel-loads-trigger" onClick={() => setLoadSheetOpen(true)}><Power aria-hidden="true" /><span>{locale === 'en' ? `View all ${visualLoads.length} devices` : `查看全部${visualLoads.length}项设备`}</span><ChevronRight aria-hidden="true" /></button>
                 <div className="ai-insight"><Sparkles aria-hidden="true" /><p><strong>{locale === 'en' ? 'AI insight' : 'AI建议'}</strong><span>{activeScene === 'movie' ? (locale === 'en' ? 'Enough energy for two movies and overnight climate.' : '当前电量足够观看两部电影并维持整夜空调。') : (locale === 'en' ? 'Solar surplus will restore 12% battery before sunset.' : '日落前，太阳能余量预计可补充12%电量。')}</span></p></div>
               </>
             )}
@@ -447,16 +485,16 @@ export default function Home() {
         <SheetHeader className="load-sheet-header">
           <div>
             <span className="eyebrow">{locale === 'en' ? 'LIVE SCENE STATUS' : '当前场景状态'}</span>
-            <SheetTitle>{pick(current.name)} {locale === 'en' ? 'Mode · All loads' : '模式 · 全部负载'}</SheetTitle>
-            <SheetDescription>{locale === 'en' ? `${activeLoadCount} active · ${visualLoads.length - activeLoadCount} off or standby · Tap a load to change it` : `${activeLoadCount}项运行 · ${visualLoads.length - activeLoadCount}项关闭或待机 · 点击负载可切换状态`}</SheetDescription>
+            <SheetTitle>{pick(current.name)} {locale === 'en' ? 'Mode · All devices' : '模式 · 全部设备'}</SheetTitle>
+            <SheetDescription>{locale === 'en' ? `${cabinLoads.length} loads · ${onlineSensorCount}/${sensorDevices.length} sensors online · Tap a device to change status` : `${cabinLoads.length}项负载 · ${onlineSensorCount}/${sensorDevices.length}个传感器在线 · 点击设备可切换状态`}</SheetDescription>
           </div>
-          <SheetClose className="sheet-close-button" aria-label={locale === 'en' ? 'Close load status' : '关闭负载状态'}><X aria-hidden="true" /></SheetClose>
+          <SheetClose className="sheet-close-button" aria-label={locale === 'en' ? 'Close device status' : '关闭设备状态'}><X aria-hidden="true" /></SheetClose>
         </SheetHeader>
-        <div className="sheet-load-grid" aria-label={locale === 'en' ? 'All RV load controls' : '全部房车负载控制'}>
+        <div className="sheet-load-grid" aria-label={locale === 'en' ? 'All RV device controls' : '全部房车设备控制'}>
           {visualLoads.map(load => {
             const LoadIcon = load.icon;
             const state = getLoadState(load);
-            return <button className={`sheet-load-card ${state.on ? 'is-on' : 'is-off'}`} type="button" key={load.key} aria-pressed={state.on} onClick={() => toggleLoad(load)}><span className="sheet-load-icon"><LoadIcon aria-hidden="true" /></span><span className="sheet-load-copy"><strong>{pick(load.name)}</strong><small>{pick(state.value)}</small></span><span className="sheet-state-badge">{state.on ? (locale === 'en' ? 'ACTIVE' : '运行') : (locale === 'en' ? 'OFF / STANDBY' : '关闭 / 待机')}</span></button>;
+            return <button className={`sheet-load-card ${load.kind === 'sensor' ? 'is-sensor' : ''} ${state.on ? 'is-on' : 'is-off'}`} type="button" key={load.key} aria-pressed={state.on} onClick={() => toggleLoad(load)}><span className="sheet-load-icon"><LoadIcon aria-hidden="true" /></span><span className="sheet-load-copy"><strong>{pick(load.name)}</strong><small>{pick(state.value)}</small></span><span className="sheet-state-badge">{load.kind === 'sensor' ? (state.on ? (locale === 'en' ? 'ONLINE' : '在线') : (locale === 'en' ? 'OFFLINE' : '离线')) : (state.on ? (locale === 'en' ? 'ACTIVE' : '运行') : (locale === 'en' ? 'OFF / STANDBY' : '关闭 / 待机'))}</span></button>;
           })}
         </div>
       </SheetContent>
