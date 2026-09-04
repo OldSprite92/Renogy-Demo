@@ -336,8 +336,16 @@ export default function Home() {
                 preserveAspectRatio="none"
                 focusable="false"
               >
-                <path className="ambient-halo" vectorEffect="non-scaling-stroke" d="M82 270 C155 218 300 194 548 190 C720 187 829 206 890 260 C928 294 943 345 938 410 C934 466 895 497 824 509 C633 536 315 533 145 507 C91 499 62 467 60 414 L64 329 C65 301 71 283 82 270 Z" />
-                <path className="ambient-body-line" vectorEffect="non-scaling-stroke" d="M82 270 C155 218 300 194 548 190 C720 187 829 206 890 260 C928 294 943 345 938 410 C934 466 895 497 824 509 C633 536 315 533 145 507 C91 499 62 467 60 414 L64 329 C65 301 71 283 82 270 Z" />
+                <g className="ambient-glow">
+                  <path vectorEffect="non-scaling-stroke" d="M425 320 C500 310 600 310 690 323" />
+                  <path vectorEffect="non-scaling-stroke" d="M92 482 C158 492 239 491 310 474" />
+                  <path vectorEffect="non-scaling-stroke" d="M520 492 C618 508 734 505 820 482" />
+                </g>
+                <g className="ambient-segments">
+                  <path vectorEffect="non-scaling-stroke" d="M425 320 C500 310 600 310 690 323" />
+                  <path vectorEffect="non-scaling-stroke" d="M92 482 C158 492 239 491 310 474" />
+                  <path vectorEffect="non-scaling-stroke" d="M520 492 C618 508 734 505 820 482" />
+                </g>
               </svg>
               <div className={`power-effect power-${activeScene} ${inverterOn ? 'is-running' : 'is-stopped'}`}><span /><span /><span /></div>
             </div>
