@@ -8,6 +8,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 
 type Locale = 'en' | 'zh';
 type SceneKey = 'camp' | 'away' | 'movie' | 'sleep';
@@ -214,6 +215,7 @@ export default function Home() {
   const shadesClosed = activeScene !== 'camp';
   const cinemaOn = activeScene === 'movie';
   const humidifierOn = activeScene === 'sleep';
+  const activeLoadCount = visualLoads.filter(load => load.states[activeScene].on).length;
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
   const sceneStatus = intrusion
@@ -304,7 +306,6 @@ export default function Home() {
               >
                 <path className="ambient-halo" vectorEffect="non-scaling-stroke" d="M82 270 C155 218 300 194 548 190 C720 187 829 206 890 260 C928 294 943 345 938 410 C934 466 895 497 824 509 C633 536 315 533 145 507 C91 499 62 467 60 414 L64 329 C65 301 71 283 82 270 Z" />
                 <path className="ambient-body-line" vectorEffect="non-scaling-stroke" d="M82 270 C155 218 300 194 548 190 C720 187 829 206 890 260 C928 294 943 345 938 410 C934 466 895 497 824 509 C633 536 315 533 145 507 C91 499 62 467 60 414 L64 329 C65 301 71 283 82 270 Z" />
-                <path className="ambient-skirt-line" vectorEffect="non-scaling-stroke" d="M121 472 C318 512 650 516 858 478" />
               </svg>
               <div className={`power-effect power-${activeScene}`}><span /><span /><span /></div>
             </div>
@@ -327,12 +328,32 @@ export default function Home() {
                 );
               })}
             </div>
-            <div className="automation-card">
-              <div className="automation-icon"><Sparkles aria-hidden="true" /></div>
-              <div className="automation-copy"><small>{locale === 'en' ? 'RENOGY AI AUTOMATION' : 'RENOGY AI 自动化'}</small><strong>{sceneStatus}</strong></div>
-              <div className="automation-steps">{current.steps.map(step => <span key={step.en}><Check aria-hidden="true" /> {pick(step)}</span>)}</div>
-              <ChevronRight aria-hidden="true" className="automation-arrow" />
-            </div>
+            <Sheet>
+              <div className="automation-card">
+                <div className="automation-icon"><Sparkles aria-hidden="true" /></div>
+                <div className="automation-copy"><small>{locale === 'en' ? 'RENOGY AI AUTOMATION' : 'RENOGY AI 自动化'}</small><strong>{sceneStatus}</strong></div>
+                <div className="automation-steps">{current.steps.map(step => <span key={step.en}><Check aria-hidden="true" /> {pick(step)}</span>)}</div>
+                <SheetTrigger className="load-sheet-trigger"><span>{locale === 'en' ? 'All loads' : '全部负载'}</span><ChevronRight aria-hidden="true" /></SheetTrigger>
+              </div>
+              <SheetContent side="bottom" showCloseButton={false} className="load-sheet">
+                <div className="sheet-grabber" aria-hidden="true" />
+                <SheetHeader className="load-sheet-header">
+                  <div>
+                    <span className="eyebrow">{locale === 'en' ? 'LIVE SCENE STATUS' : '当前场景状态'}</span>
+                    <SheetTitle>{pick(current.name)} {locale === 'en' ? 'Mode · All loads' : '模式 · 全部负载'}</SheetTitle>
+                    <SheetDescription>{locale === 'en' ? `${activeLoadCount} active · ${visualLoads.length - activeLoadCount} off or standby` : `${activeLoadCount}项运行 · ${visualLoads.length - activeLoadCount}项关闭或待机`}</SheetDescription>
+                  </div>
+                  <SheetClose className="sheet-close-button" aria-label={locale === 'en' ? 'Close load status' : '关闭负载状态'}><X aria-hidden="true" /></SheetClose>
+                </SheetHeader>
+                <div className="sheet-load-grid" role="list" aria-label={locale === 'en' ? 'All RV load states' : '全部房车负载状态'}>
+                  {visualLoads.map(load => {
+                    const LoadIcon = load.icon;
+                    const state = load.states[activeScene];
+                    return <div className={`sheet-load-card ${state.on ? 'is-on' : 'is-off'}`} role="listitem" key={load.key}><span className="sheet-load-icon"><LoadIcon aria-hidden="true" /></span><div><strong>{pick(load.name)}</strong><small>{pick(state.value)}</small></div><span className="sheet-state-badge">{state.on ? (locale === 'en' ? 'ACTIVE' : '运行') : (locale === 'en' ? 'OFF / STANDBY' : '关闭 / 待机')}</span></div>;
+                  })}
+                </div>
+              </SheetContent>
+            </Sheet>
             {pendingScene && (
               <div className="activation-layer" role="status" aria-live="polite">
                 <div className="activation-core"><PreviewIcon aria-hidden="true" /><span>{locale === 'en' ? 'Activating' : '正在启动'}</span><strong>{pick(preview.name)} {locale === 'en' ? 'Mode' : '模式'}</strong><div className="activation-progress"><span /></div></div>
@@ -376,9 +397,10 @@ export default function Home() {
                   <div className="climate-orbit"><Wind aria-hidden="true" /><span /></div>
                   <p><Check aria-hidden="true" /> {locale === 'en' ? 'Temperature and air quality are ideal' : '温度与空气质量均处于理想状态'}</p>
                 </div>
-                <div className="device-list">{current.devices.map(device => {
-                  const DeviceIcon = iconMap[device.icon];
-                  return <div className="device-row" key={device.name.en}><span className={device.active ? 'device-icon is-on' : 'device-icon'}><DeviceIcon aria-hidden="true" /></span><div><strong>{pick(device.name)}</strong><small>{pick(device.value)}</small></div><span className={device.active ? 'device-state is-on' : 'device-state'}>{device.active ? (locale === 'en' ? 'ON' : '开') : (locale === 'en' ? 'OFF' : '关')}</span></div>;
+                <div className="device-list full-load-list">{visualLoads.map(load => {
+                  const DeviceIcon = load.icon;
+                  const state = load.states[activeScene];
+                  return <div className="device-row" key={load.key}><span className={state.on ? 'device-icon is-on' : 'device-icon'}><DeviceIcon aria-hidden="true" /></span><div><strong>{pick(load.name)}</strong><small>{pick(state.value)}</small></div><span className={state.on ? 'device-state is-on' : 'device-state'}>{state.on ? (locale === 'en' ? 'ON' : '开') : (locale === 'en' ? 'OFF' : '关')}</span></div>;
                 })}</div>
                 <div className="ai-insight"><Sparkles aria-hidden="true" /><p><strong>{locale === 'en' ? 'AI insight' : 'AI建议'}</strong><span>{activeScene === 'movie' ? (locale === 'en' ? 'Enough energy for two movies and overnight climate.' : '当前电量足够观看两部电影并维持整夜空调。') : (locale === 'en' ? 'Solar surplus will restore 12% battery before sunset.' : '日落前，太阳能余量预计可补充12%电量。')}</span></p></div>
               </>
