@@ -8,7 +8,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 type Locale = 'en' | 'zh';
 type SceneKey = 'camp' | 'away' | 'movie' | 'sleep';
@@ -18,6 +18,7 @@ type Localized = { en: string; zh: string };
 type DeviceState = { icon: IconName; name: Localized; value: Localized; active: boolean };
 type LoadState = { on: boolean; value: Localized };
 type VisualLoad = { key: LoadKey; icon: LucideIcon; name: Localized; states: Record<SceneKey, LoadState> };
+type LoadOverrides = Partial<Record<SceneKey, Partial<Record<LoadKey, boolean>>>>;
 type Scene = {
   key: SceneKey; name: Localized; kicker: Localized; message: Localized; ready: Localized;
   time: string; solar: string; load: string; batteryFlow: string; runtime: string;
@@ -199,23 +200,46 @@ const visualLoads: VisualLoad[] = [
   },
 ];
 
+const manualLoadValues: Record<LoadKey, { on: Localized; off: Localized }> = {
+  climate: { on: { en: 'Manual · 24°C', zh: '手动 · 24°C' }, off: { en: 'Powered off', zh: '已关闭' } },
+  lights: { on: { en: 'Warm · 65%', zh: '暖光 · 65%' }, off: { en: 'Off', zh: '已关闭' } },
+  shades: { on: { en: 'Open', zh: '已打开' }, off: { en: 'Closed', zh: '已关闭' } },
+  tv: { on: { en: 'Cinema', zh: '影院模式' }, off: { en: 'Off', zh: '已关闭' } },
+  humidifier: { on: { en: 'Auto · 48%', zh: '自动 · 48%' }, off: { en: 'Standby', zh: '待机' } },
+  ambient: { on: { en: 'Manual · 35%', zh: '手动 · 35%' }, off: { en: 'Off', zh: '已关闭' } },
+  audio: { on: { en: 'Immersive', zh: '沉浸模式' }, off: { en: 'Off', zh: '已关闭' } },
+  inverter: { on: { en: 'Manual power', zh: '手动供电' }, off: { en: 'Powered off', zh: '已关闭' } },
+  lock: { on: { en: 'Secured', zh: '已锁定' }, off: { en: 'Unlocked', zh: '已解锁' } },
+};
+
 export default function Home() {
   const [locale, setLocale] = useState<Locale>('en');
   const [activeScene, setActiveScene] = useState<SceneKey>('camp');
   const [pendingScene, setPendingScene] = useState<SceneKey | null>(null);
   const [intrusion, setIntrusion] = useState(false);
+  const [loadSheetOpen, setLoadSheetOpen] = useState(false);
+  const [loadOverrides, setLoadOverrides] = useState<LoadOverrides>({});
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const current = scenes[activeScene];
   const preview = scenes[pendingScene ?? activeScene];
   const PreviewIcon = preview.sceneIcon;
   const pick = (value: Localized) => value[locale];
-  const climateOn = activeScene !== 'away';
-  const mainLightsOn = activeScene === 'camp';
-  const ambientOn = activeScene !== 'away';
-  const shadesClosed = activeScene !== 'camp';
-  const cinemaOn = activeScene === 'movie';
-  const humidifierOn = activeScene === 'sleep';
-  const activeLoadCount = visualLoads.filter(load => load.states[activeScene].on).length;
+  const getLoadState = (load: VisualLoad, scene: SceneKey = activeScene): LoadState => {
+    const override = loadOverrides[scene]?.[load.key];
+    return typeof override === 'boolean' ? { on: override, value: manualLoadValues[load.key][override ? 'on' : 'off'] } : load.states[scene];
+  };
+  const getLoadByKey = (key: LoadKey) => getLoadState(visualLoads.find(load => load.key === key)!);
+  const activeLoads = visualLoads.filter(load => getLoadState(load).on);
+  const panelActiveLoads = activeLoads.filter(load => load.key !== 'climate');
+  const climateOn = getLoadByKey('climate').on;
+  const mainLightsOn = getLoadByKey('lights').on;
+  const ambientOn = getLoadByKey('ambient').on;
+  const shadesClosed = !getLoadByKey('shades').on;
+  const tvOn = getLoadByKey('tv').on;
+  const audioOn = getLoadByKey('audio').on;
+  const humidifierOn = getLoadByKey('humidifier').on;
+  const inverterOn = getLoadByKey('inverter').on;
+  const activeLoadCount = activeLoads.length;
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
   const sceneStatus = intrusion
@@ -225,6 +249,8 @@ export default function Home() {
   function activateScene(key: SceneKey) {
     if (key === activeScene && !pendingScene) return;
     if (timer.current) clearTimeout(timer.current);
+    setLoadOverrides({});
+    setLoadSheetOpen(false);
     setIntrusion(false);
     setPendingScene(key);
     timer.current = setTimeout(() => { setActiveScene(key); setPendingScene(null); }, 980);
@@ -232,10 +258,16 @@ export default function Home() {
 
   function resetDemo() {
     if (timer.current) clearTimeout(timer.current);
-    setPendingScene(null); setIntrusion(false); setActiveScene('camp');
+    setPendingScene(null); setIntrusion(false); setActiveScene('camp'); setLoadOverrides({}); setLoadSheetOpen(false);
+  }
+
+  function toggleLoad(load: VisualLoad) {
+    const next = !getLoadState(load).on;
+    setLoadOverrides(previous => ({ ...previous, [activeScene]: { ...previous[activeScene], [load.key]: next } }));
   }
 
   return (
+    <Sheet open={loadSheetOpen} onOpenChange={setLoadSheetOpen}>
     <main className={`app-shell scene-${activeScene} ${intrusion ? 'is-alert' : ''}`}>
       <header className="topbar">
         <div className="brand-lockup">
@@ -295,8 +327,8 @@ export default function Home() {
               <div className={`main-light-effect ${mainLightsOn ? 'is-running' : 'is-stopped'}`}><span /><span /><span /></div>
               <div className={`airflow-effect ${climateOn ? 'is-running' : 'is-stopped'} airflow-${activeScene}`}><span /><span /><span /></div>
               <div className={`shade-effect ${shadesClosed ? 'is-closed' : 'is-open'}`}><span /><span /><span /><span /></div>
-              <div className={`screen-effect ${cinemaOn ? 'is-running' : 'is-stopped'}`}><Film /></div>
-              <div className={`audio-effect ${cinemaOn ? 'is-running' : 'is-stopped'}`}><span /><span /><span /></div>
+              <div className={`screen-effect ${tvOn ? 'is-running' : 'is-stopped'}`}><Film /></div>
+              <div className={`audio-effect ${audioOn ? 'is-running' : 'is-stopped'}`}><span /><span /><span /></div>
               <div className={`mist-effect ${humidifierOn ? 'is-running' : 'is-stopped'}`}><span /><span /><span /></div>
               <svg
                 className={`ambient-effect ${ambientOn ? `is-running ambient-${activeScene}` : 'is-stopped'}`}
@@ -307,12 +339,12 @@ export default function Home() {
                 <path className="ambient-halo" vectorEffect="non-scaling-stroke" d="M82 270 C155 218 300 194 548 190 C720 187 829 206 890 260 C928 294 943 345 938 410 C934 466 895 497 824 509 C633 536 315 533 145 507 C91 499 62 467 60 414 L64 329 C65 301 71 283 82 270 Z" />
                 <path className="ambient-body-line" vectorEffect="non-scaling-stroke" d="M82 270 C155 218 300 194 548 190 C720 187 829 206 890 260 C928 294 943 345 938 410 C934 466 895 497 824 509 C633 536 315 533 145 507 C91 499 62 467 60 414 L64 329 C65 301 71 283 82 270 Z" />
               </svg>
-              <div className={`power-effect power-${activeScene}`}><span /><span /><span /></div>
+              <div className={`power-effect power-${activeScene} ${inverterOn ? 'is-running' : 'is-stopped'}`}><span /><span /><span /></div>
             </div>
             <div className="vehicle-load-layer" role="list" aria-label={locale === 'en' ? 'Appliances and current states inside the RV' : '房车内负载电器及当前状态'}>
               {visualLoads.map((load, index) => {
                 const LoadIcon = load.icon;
-                const state = load.states[activeScene];
+                const state = getLoadState(load);
                 return (
                   <div
                     key={`${activeScene}-${load.key}`}
@@ -328,32 +360,12 @@ export default function Home() {
                 );
               })}
             </div>
-            <Sheet>
-              <div className="automation-card">
-                <div className="automation-icon"><Sparkles aria-hidden="true" /></div>
-                <div className="automation-copy"><small>{locale === 'en' ? 'RENOGY AI AUTOMATION' : 'RENOGY AI 自动化'}</small><strong>{sceneStatus}</strong></div>
-                <div className="automation-steps">{current.steps.map(step => <span key={step.en}><Check aria-hidden="true" /> {pick(step)}</span>)}</div>
-                <SheetTrigger className="load-sheet-trigger"><span>{locale === 'en' ? 'All loads' : '全部负载'}</span><ChevronRight aria-hidden="true" /></SheetTrigger>
-              </div>
-              <SheetContent side="bottom" showCloseButton={false} className="load-sheet">
-                <div className="sheet-grabber" aria-hidden="true" />
-                <SheetHeader className="load-sheet-header">
-                  <div>
-                    <span className="eyebrow">{locale === 'en' ? 'LIVE SCENE STATUS' : '当前场景状态'}</span>
-                    <SheetTitle>{pick(current.name)} {locale === 'en' ? 'Mode · All loads' : '模式 · 全部负载'}</SheetTitle>
-                    <SheetDescription>{locale === 'en' ? `${activeLoadCount} active · ${visualLoads.length - activeLoadCount} off or standby` : `${activeLoadCount}项运行 · ${visualLoads.length - activeLoadCount}项关闭或待机`}</SheetDescription>
-                  </div>
-                  <SheetClose className="sheet-close-button" aria-label={locale === 'en' ? 'Close load status' : '关闭负载状态'}><X aria-hidden="true" /></SheetClose>
-                </SheetHeader>
-                <div className="sheet-load-grid" role="list" aria-label={locale === 'en' ? 'All RV load states' : '全部房车负载状态'}>
-                  {visualLoads.map(load => {
-                    const LoadIcon = load.icon;
-                    const state = load.states[activeScene];
-                    return <div className={`sheet-load-card ${state.on ? 'is-on' : 'is-off'}`} role="listitem" key={load.key}><span className="sheet-load-icon"><LoadIcon aria-hidden="true" /></span><div><strong>{pick(load.name)}</strong><small>{pick(state.value)}</small></div><span className="sheet-state-badge">{state.on ? (locale === 'en' ? 'ACTIVE' : '运行') : (locale === 'en' ? 'OFF / STANDBY' : '关闭 / 待机')}</span></div>;
-                  })}
-                </div>
-              </SheetContent>
-            </Sheet>
+            <div className="automation-card">
+              <div className="automation-icon"><Sparkles aria-hidden="true" /></div>
+              <div className="automation-copy"><small>{locale === 'en' ? 'RENOGY AI AUTOMATION' : 'RENOGY AI 自动化'}</small><strong>{sceneStatus}</strong></div>
+              <div className="automation-steps">{current.steps.map(step => <span key={step.en}><Check aria-hidden="true" /> {pick(step)}</span>)}</div>
+              <button className="load-sheet-trigger" onClick={() => setLoadSheetOpen(true)}><span>{locale === 'en' ? 'All loads' : '全部负载'}</span><ChevronRight aria-hidden="true" /></button>
+            </div>
             {pendingScene && (
               <div className="activation-layer" role="status" aria-live="polite">
                 <div className="activation-core"><PreviewIcon aria-hidden="true" /><span>{locale === 'en' ? 'Activating' : '正在启动'}</span><strong>{pick(preview.name)} {locale === 'en' ? 'Mode' : '模式'}</strong><div className="activation-progress"><span /></div></div>
@@ -389,19 +401,22 @@ export default function Home() {
                   {intrusion ? <X aria-hidden="true" /> : <ShieldAlert aria-hidden="true" />}
                   {intrusion ? (locale === 'en' ? 'Resolve demo alert' : '解除演示警报') : (locale === 'en' ? 'Simulate motion' : '模拟移动入侵')}
                 </button>
+                <button className="panel-loads-trigger" onClick={() => setLoadSheetOpen(true)}><Power aria-hidden="true" /><span>{locale === 'en' ? `View all ${visualLoads.length} loads` : `查看全部${visualLoads.length}项负载`}</span><ChevronRight aria-hidden="true" /></button>
               </>
             ) : (
               <>
                 <div className="climate-card">
-                  <div><span>{locale === 'en' ? 'Interior climate' : '舱内环境'}</span><strong>{current.temperature}<small>°C</small></strong></div>
-                  <div className="climate-orbit"><Wind aria-hidden="true" /><span /></div>
-                  <p><Check aria-hidden="true" /> {locale === 'en' ? 'Temperature and air quality are ideal' : '温度与空气质量均处于理想状态'}</p>
+                  <div><span>{locale === 'en' ? 'Interior climate' : '舱内环境'}</span><strong>{climateOn ? current.temperature : '--'}<small>{climateOn ? '°C' : (locale === 'en' ? 'OFF' : '关闭')}</small></strong></div>
+                  <div className={`climate-orbit ${climateOn ? '' : 'is-off'}`}><Wind aria-hidden="true" /><span /></div>
+                  <p>{climateOn ? <Check aria-hidden="true" /> : <Power aria-hidden="true" />} {climateOn ? (locale === 'en' ? 'Temperature and air quality are ideal' : '温度与空气质量均处于理想状态') : (locale === 'en' ? 'Climate is manually powered off' : '空调已手动关闭')}</p>
                 </div>
-                <div className="device-list full-load-list">{visualLoads.map(load => {
+                <div className="active-load-heading"><span>{locale === 'en' ? 'Active loads' : '已开启负载'}</span><strong>{activeLoads.length}</strong></div>
+                {panelActiveLoads.length ? <div className="device-list active-load-list">{panelActiveLoads.map(load => {
                   const DeviceIcon = load.icon;
-                  const state = load.states[activeScene];
-                  return <div className="device-row" key={load.key}><span className={state.on ? 'device-icon is-on' : 'device-icon'}><DeviceIcon aria-hidden="true" /></span><div><strong>{pick(load.name)}</strong><small>{pick(state.value)}</small></div><span className={state.on ? 'device-state is-on' : 'device-state'}>{state.on ? (locale === 'en' ? 'ON' : '开') : (locale === 'en' ? 'OFF' : '关')}</span></div>;
-                })}</div>
+                  const state = getLoadState(load);
+                  return <div className="device-row" key={load.key}><span className="device-icon is-on"><DeviceIcon aria-hidden="true" /></span><div><strong>{pick(load.name)}</strong><small>{pick(state.value)}</small></div><span className="device-state is-on">{locale === 'en' ? 'ON' : '开'}</span></div>;
+                })}</div> : activeLoads.length === 0 ? <div className="loads-empty"><Power aria-hidden="true" /><span>{locale === 'en' ? 'All cabin loads are off' : '所有舱内负载均已关闭'}</span></div> : null}
+                <button className="panel-loads-trigger" onClick={() => setLoadSheetOpen(true)}><Power aria-hidden="true" /><span>{locale === 'en' ? `View all ${visualLoads.length} loads` : `查看全部${visualLoads.length}项负载`}</span><ChevronRight aria-hidden="true" /></button>
                 <div className="ai-insight"><Sparkles aria-hidden="true" /><p><strong>{locale === 'en' ? 'AI insight' : 'AI建议'}</strong><span>{activeScene === 'movie' ? (locale === 'en' ? 'Enough energy for two movies and overnight climate.' : '当前电量足够观看两部电影并维持整夜空调。') : (locale === 'en' ? 'Solar surplus will restore 12% battery before sunset.' : '日落前，太阳能余量预计可补充12%电量。')}</span></p></div>
               </>
             )}
@@ -419,7 +434,26 @@ export default function Home() {
       </div>
 
       <div className="portrait-gate"><RotateCcw aria-hidden="true" /><h1>Renogy ONE Vision</h1><p>{locale === 'en' ? 'Rotate your iPad for the full experience.' : '请将iPad旋转至横屏以获得完整体验。'}</p></div>
+      <SheetContent side="bottom" showCloseButton={false} className="load-sheet">
+        <div className="sheet-grabber" aria-hidden="true" />
+        <SheetHeader className="load-sheet-header">
+          <div>
+            <span className="eyebrow">{locale === 'en' ? 'LIVE SCENE STATUS' : '当前场景状态'}</span>
+            <SheetTitle>{pick(current.name)} {locale === 'en' ? 'Mode · All loads' : '模式 · 全部负载'}</SheetTitle>
+            <SheetDescription>{locale === 'en' ? `${activeLoadCount} active · ${visualLoads.length - activeLoadCount} off or standby · Tap a load to change it` : `${activeLoadCount}项运行 · ${visualLoads.length - activeLoadCount}项关闭或待机 · 点击负载可切换状态`}</SheetDescription>
+          </div>
+          <SheetClose className="sheet-close-button" aria-label={locale === 'en' ? 'Close load status' : '关闭负载状态'}><X aria-hidden="true" /></SheetClose>
+        </SheetHeader>
+        <div className="sheet-load-grid" aria-label={locale === 'en' ? 'All RV load controls' : '全部房车负载控制'}>
+          {visualLoads.map(load => {
+            const LoadIcon = load.icon;
+            const state = getLoadState(load);
+            return <button className={`sheet-load-card ${state.on ? 'is-on' : 'is-off'}`} type="button" key={load.key} aria-pressed={state.on} onClick={() => toggleLoad(load)}><span className="sheet-load-icon"><LoadIcon aria-hidden="true" /></span><span className="sheet-load-copy"><strong>{pick(load.name)}</strong><small>{pick(state.value)}</small></span><span className="sheet-state-badge">{state.on ? (locale === 'en' ? 'ACTIVE' : '运行') : (locale === 'en' ? 'OFF / STANDBY' : '关闭 / 待机')}</span></button>;
+          })}
+        </div>
+      </SheetContent>
     </main>
+    </Sheet>
   );
 }
 
