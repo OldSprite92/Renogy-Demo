@@ -118,7 +118,7 @@ svg { stroke-width: 1.8; }
 .hero-chips svg { width: 12px; color: #70d5e6; }
 
 .rv-state-effects { position: absolute; z-index: 2; inset: 0; pointer-events: none; overflow: hidden; }
-.rv-state-effects > div { transition: opacity .45s ease, transform .55s cubic-bezier(.22,.9,.3,1), filter .45s ease; }
+.rv-state-effects > div, .rv-state-effects > svg { transition: opacity .45s ease, transform .55s cubic-bezier(.22,.9,.3,1), filter .45s ease; }
 .rv-state-effects .is-stopped { opacity: 0; }
 .rv-state-effects .is-running { opacity: 1; }
 .main-light-effect { position: absolute; top: 28%; left: 49%; width: 32%; height: 30%; background: radial-gradient(ellipse at 50% 2%, rgba(255,207,126,.4), rgba(255,179,85,.12) 34%, transparent 72%); filter: blur(1px); mix-blend-mode: screen; }
@@ -160,15 +160,16 @@ svg { stroke-width: 1.8; }
 .mist-effect span:nth-child(2) { left: 48%; height: 92%; animation-delay: -.8s; }
 .mist-effect span:nth-child(3) { left: 76%; height: 62%; animation-delay: -1.5s; }
 
-.ambient-effect { position: absolute; right: 18%; bottom: 18%; left: 25%; height: 18%; filter: blur(1px); }
-.ambient-effect.is-stopped { transform: scaleX(.55); }
-.ambient-effect span { position: absolute; right: 0; left: 0; height: 2px; border-radius: 99px; background: #54d5e8; box-shadow: 0 0 12px 4px rgba(55,199,218,.55); }
-.ambient-effect span:first-child { top: 20%; }
-.ambient-effect span:last-child { bottom: 10%; left: 18%; }
-.ambient-effect.ambient-camp { opacity: .58; }
-.ambient-effect.ambient-movie span { background: #aa8cf4; box-shadow: 0 0 15px 5px rgba(137,100,239,.65); }
-.ambient-effect.ambient-sleep { opacity: .42; }
-.ambient-effect.ambient-sleep span { background: #55b9de; box-shadow: 0 0 13px 4px rgba(60,146,211,.55); }
+.ambient-effect { position: absolute; inset: 10% 2.5% 11%; width: 95%; height: 79%; overflow: visible; color: #54d5e8; filter: drop-shadow(0 0 5px rgba(67,205,224,.72)) drop-shadow(0 0 14px rgba(40,178,203,.3)); }
+.ambient-effect.is-stopped { opacity: 0; transform: scale(.94); }
+.ambient-effect path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.ambient-halo { stroke: currentColor; stroke-width: 9; opacity: .12; filter: blur(3px); }
+.ambient-body-line { stroke: currentColor; stroke-width: 2.4; stroke-dasharray: 17 8; animation: ambient-orbit 7s linear infinite; }
+.ambient-skirt-line { stroke: currentColor; stroke-width: 2.8; opacity: .72; }
+.ambient-effect.ambient-camp { opacity: .7; color: #55d8e8; }
+.ambient-effect.ambient-movie { color: #ae94ff; filter: drop-shadow(0 0 6px rgba(174,148,255,.8)) drop-shadow(0 0 18px rgba(125,91,230,.42)); }
+.ambient-effect.ambient-sleep { opacity: .44; color: #5cbbe4; filter: drop-shadow(0 0 5px rgba(92,187,228,.62)) drop-shadow(0 0 13px rgba(50,126,191,.28)); }
+.ambient-effect.ambient-sleep .ambient-body-line { animation-duration: 12s; }
 
 .power-effect { position: absolute; top: 50%; left: 46%; width: 13%; height: 25%; }
 .power-effect span { position: absolute; top: 45%; left: 45%; width: 7px; height: 7px; border-radius: 50%; background: #7ce2ef; box-shadow: 0 0 11px #45c6dc; animation: power-node 2.2s ease-in-out infinite; }
@@ -329,6 +330,7 @@ svg { stroke-width: 1.8; }
 @keyframes detect { from { transform: scale(.82); opacity: 0; } }
 @keyframes wind { 50% { transform: rotate(8deg) scale(1.08); } }
 @keyframes alarm-edge { 50% { box-shadow: inset 0 0 95px rgba(255,70,81,.25); } }
+@keyframes ambient-orbit { to { stroke-dashoffset: -100; } }
 @keyframes load-pop { from { opacity: 0; transform: translateY(8px) scale(.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes air-flow { 0%,100% { transform: translateX(-4px) scaleX(.88); opacity: .3; } 50% { transform: translateX(7px) scaleX(1.06); opacity: 1; } }
 @keyframes screen-pulse { 50% { transform: scale(1.08); filter: drop-shadow(0 0 6px #cabdff); } }

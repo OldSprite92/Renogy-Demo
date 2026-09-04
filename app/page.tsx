@@ -296,7 +296,16 @@ export default function Home() {
               <div className={`screen-effect ${cinemaOn ? 'is-running' : 'is-stopped'}`}><Film /></div>
               <div className={`audio-effect ${cinemaOn ? 'is-running' : 'is-stopped'}`}><span /><span /><span /></div>
               <div className={`mist-effect ${humidifierOn ? 'is-running' : 'is-stopped'}`}><span /><span /><span /></div>
-              <div className={`ambient-effect ${ambientOn ? 'is-running ambient-${activeScene}' : 'is-stopped'}`}><span /><span /></div>
+              <svg
+                className={`ambient-effect ${ambientOn ? `is-running ambient-${activeScene}` : 'is-stopped'}`}
+                viewBox="0 0 1000 620"
+                preserveAspectRatio="none"
+                focusable="false"
+              >
+                <path className="ambient-halo" vectorEffect="non-scaling-stroke" d="M82 270 C155 218 300 194 548 190 C720 187 829 206 890 260 C928 294 943 345 938 410 C934 466 895 497 824 509 C633 536 315 533 145 507 C91 499 62 467 60 414 L64 329 C65 301 71 283 82 270 Z" />
+                <path className="ambient-body-line" vectorEffect="non-scaling-stroke" d="M82 270 C155 218 300 194 548 190 C720 187 829 206 890 260 C928 294 943 345 938 410 C934 466 895 497 824 509 C633 536 315 533 145 507 C91 499 62 467 60 414 L64 329 C65 301 71 283 82 270 Z" />
+                <path className="ambient-skirt-line" vectorEffect="non-scaling-stroke" d="M121 472 C318 512 650 516 858 478" />
+              </svg>
               <div className={`power-effect power-${activeScene}`}><span /><span /><span /></div>
             </div>
             <div className="vehicle-load-layer" role="list" aria-label={locale === 'en' ? 'Appliances and current states inside the RV' : '房车内负载电器及当前状态'}>
