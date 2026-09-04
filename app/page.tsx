@@ -87,7 +87,7 @@ const scenes: Record<SceneKey, Scene> = {
       { icon: 'tv', name: { en: 'Entertainment', zh: '娱乐系统' }, value: { en: 'Cinema · On', zh: '影院 · 已开启' }, active: true },
       { icon: 'audio', name: { en: 'Spatial audio', zh: '空间音响' }, value: { en: 'Immersive', zh: '沉浸模式' }, active: true },
       { icon: 'lamp', name: { en: 'Ambient lights', zh: '氛围灯' }, value: { en: 'Warm · 30%', zh: '暖光 · 30%' }, active: true },
-      { icon: 'blinds', name: { en: 'Smart shades', zh: '智能遮阳帘' }, value: { en: 'Closed', zh: '已关闭' }, active: true },
+      { icon: 'blinds', name: { en: 'Smart shades', zh: '智能遮阳帘' }, value: { en: 'Closed', zh: '已关闭' }, active: false },
     ],
   },
   sleep: {
@@ -137,9 +137,9 @@ const visualLoads: VisualLoad[] = [
     key: 'shades', icon: Blinds, name: { en: 'Smart shades', zh: '智能遮阳帘' },
     states: {
       camp: { on: true, value: { en: 'Open', zh: '已打开' } },
-      away: { on: true, value: { en: 'Closed', zh: '已关闭' } },
-      movie: { on: true, value: { en: 'Closed', zh: '已关闭' } },
-      sleep: { on: true, value: { en: 'Closed', zh: '已关闭' } },
+      away: { on: false, value: { en: 'Closed', zh: '已关闭' } },
+      movie: { on: false, value: { en: 'Closed', zh: '已关闭' } },
+      sleep: { on: false, value: { en: 'Closed', zh: '已关闭' } },
     },
   },
   {
