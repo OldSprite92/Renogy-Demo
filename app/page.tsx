@@ -136,7 +136,7 @@ const visualLoads: VisualLoad[] = [
   {
     key: 'shades', icon: Blinds, name: { en: 'Smart shades', zh: '智能遮阳帘' },
     states: {
-      camp: { on: false, value: { en: 'Open', zh: '已打开' } },
+      camp: { on: true, value: { en: 'Open', zh: '已打开' } },
       away: { on: true, value: { en: 'Closed', zh: '已关闭' } },
       movie: { on: true, value: { en: 'Closed', zh: '已关闭' } },
       sleep: { on: true, value: { en: 'Closed', zh: '已关闭' } },
