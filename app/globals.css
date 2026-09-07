@@ -206,6 +206,10 @@ svg { stroke-width: 1.8; }
 .load-node.is-off .load-node-copy strong { color: #b5c0c4; }
 .load-node.is-off .load-node-copy small { color: #7f8d92; }
 .load-node.is-off .load-state-dot { background: #5e6b70; box-shadow: none; }
+.load-node { min-height: 44px; pointer-events: auto; cursor: pointer; color: var(--text); font: inherit; text-align: left; touch-action: manipulation; transition: border-color .18s ease, background .18s ease; }
+.load-node:hover { border-color: #80e0ed; background: rgba(10,36,46,.96); }
+.load-node:focus-visible { outline: 2px solid #80e0ed; outline-offset: 4px; }
+.load-node:active { background: rgba(23,65,78,.96); }
 .load-climate { top: 25%; left: 56%; }
 .load-lights { top: 34%; left: 43%; }
 .load-shades { top: 45%; left: 6%; }

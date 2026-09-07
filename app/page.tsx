@@ -483,22 +483,24 @@ export default function Home() {
               </svg>
               <div className={`power-effect power-${activeScene} ${inverterOn ? 'is-running' : 'is-stopped'}`}><span /><span /><span /></div>
             </div>
-            <div className="vehicle-load-layer" role="list" aria-label={locale === 'en' ? 'Appliances and current states inside the RV' : '房车内负载电器及当前状态'}>
+            <div className="vehicle-load-layer" role="group" aria-label={locale === 'en' ? 'RV device controls' : '房车负载控制'}>
               {cabinLoads.map((load, index) => {
                 const LoadIcon = load.icon;
                 const state = getLoadState(load);
                 return (
-                  <div
+                  <button
                     key={`${activeScene}-${load.key}`}
                     className={`load-node load-${load.key} ${state.on ? 'is-on' : 'is-off'}`}
-                    role="listitem"
+                    type="button"
+                    aria-haspopup="dialog"
+                    onClick={() => { setSelectedLoadKey(load.key); setLoadSheetOpen(true); }}
                     style={{ animationDelay: `${index * 48}ms` }}
-                    aria-label={`${pick(load.name)}: ${pick(state.value)}`}
+                    aria-label={`${pick(load.name)}: ${pick(state.value)} · ${locale === 'en' ? 'Edit device settings' : '编辑设备设置'}`}
                   >
                     <span className="load-node-icon"><LoadIcon aria-hidden="true" /></span>
                     <span className="load-node-copy"><strong>{pick(load.name)}</strong><small>{pick(state.value)}</small></span>
                     <span className="load-state-dot" aria-hidden="true" />
-                  </div>
+                  </button>
                 );
               })}
             </div>
