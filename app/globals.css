@@ -359,8 +359,8 @@ svg { stroke-width: 1.8; }
 .card-quick-switch[data-slot="switch"] { box-sizing: border-box; width: 48px !important; min-width: 48px; height: 28px !important; min-height: 28px; padding: 3px; border: 1px solid rgba(145,170,179,.2); background: rgba(145,170,179,.16); cursor: pointer; touch-action: manipulation; }
 .card-quick-switch[data-slot="switch"][data-checked] { border-color: rgba(85,214,161,.45); background: #2aab79; box-shadow: 0 0 14px rgba(85,214,161,.18); }
 .card-quick-switch[data-slot="switch"]::after { inset: -8px -5px; }
-.card-quick-switch [data-slot="switch-thumb"] { width: 20px !important; height: 20px !important; flex: 0 0 20px; background: #d8e2e5; box-shadow: 0 1px 4px rgba(0,0,0,.3); transform: translateX(0) !important; }
-.card-quick-switch[data-checked] [data-slot="switch-thumb"] { background: #fff; transform: translateX(20px) !important; }
+.card-quick-switch [data-slot="switch-thumb"] { width: 20px !important; height: 20px !important; flex: 0 0 20px; background: #d8e2e5; box-shadow: 0 1px 4px rgba(0,0,0,.3); translate: 0 0 !important; transform: none !important; }
+.card-quick-switch[data-checked] [data-slot="switch-thumb"] { background: #fff; translate: 20px 0 !important; transform: none !important; }
 
 .device-control-panel { width: min(1240px,100%); margin: 0 auto; display: grid; gap: 12px; }
 .device-control-summary { min-height: 72px; display: grid; grid-template-columns: 52px minmax(0,1fr) auto; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid rgba(101,209,226,.19); border-radius: 15px; background: linear-gradient(145deg,rgba(36,173,211,.075),rgba(255,255,255,.02)); }
