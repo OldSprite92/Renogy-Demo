@@ -2,7 +2,7 @@
 
 import {
   Armchair, ArrowDown, ArrowLeft, ArrowUp, BatteryCharging, Blinds, Camera, Check, ChevronRight, CircleDot,
-  DoorClosed, Droplets, Film, Gauge, Languages, Lamp, Leaf, Lock, MapPin, Moon,
+  DoorClosed, Droplets, Film, Gauge, Hand, Languages, Lamp, Leaf, Lock, MapPin, Moon,
   Power, Radio, RotateCcw, ScanLine, ShieldAlert, ShieldCheck, Siren, Snowflake,
   Sparkles, Sun, TentTree, Thermometer, Tv, Volume2, Waves, Wifi, Wind, X, Zap,
   type LucideIcon,
@@ -413,7 +413,7 @@ export default function Home() {
           <span className="connection-pill"><Wifi aria-hidden="true" /> {locale === 'en' ? 'Connected' : '已连接'}</span>
           <time>{current.time}</time>
           <button className="icon-button language-button" onClick={() => setLocale(locale === 'en' ? 'zh' : 'en')} aria-label={locale === 'en' ? 'Switch to Chinese' : '切换到英文'}><Languages aria-hidden="true" /><span>{locale === 'en' ? '中文' : 'EN'}</span></button>
-          <button className="icon-button" onClick={resetDemo} aria-label={locale === 'en' ? 'Reset demo' : '重置演示'}><RotateCcw aria-hidden="true" /></button>
+          <button className="icon-button reset-button" onClick={resetDemo} aria-label={locale === 'en' ? 'Reset demo' : '重置演示'}><RotateCcw aria-hidden="true" /><span>{locale === 'en' ? 'Reset' : '重置'}</span></button>
         </div>
       </header>
 
@@ -421,7 +421,7 @@ export default function Home() {
         <div className="workspace-grid">
           <aside className="panel energy-panel">
             <div className="panel-heading">
-              <div><span className="eyebrow">{locale === 'en' ? 'ENERGY SYSTEM' : '能源系统'}</span><h2>{locale === 'en' ? 'Power flow' : '能量流'}</h2></div>
+              <div><span className="eyebrow">{locale === 'en' ? 'ENERGY SYSTEM' : '能源系统'}</span><h2>{locale === 'en' ? 'Power flow' : '能量流'}</h2><span className="readonly-note">{locale === 'en' ? 'View only' : '仅展示'}</span></div>
               <span className="healthy-badge"><CircleDot aria-hidden="true" /> {locale === 'en' ? 'Healthy' : '正常'}</span>
             </div>
             <div className={`battery-summary ${batteryIsCharging ? 'is-charging' : 'is-discharging'}`}>
@@ -451,7 +451,7 @@ export default function Home() {
           <section className="hero-panel">
             <img src="/assets/rv-cabin-dusk.webp" alt={locale === 'en' ? 'Modern RV cabin at Pine Lake campsite' : '停在松湖营地的现代房车内部'} className="hero-image" />
             <div className="hero-vignette" aria-hidden="true" /><div className="hero-sheen" aria-hidden="true" />
-            <div className="scene-story"><span className="eyebrow">{pick(current.name).toUpperCase()} MODE</span><h1>{pick(current.kicker)}</h1><p>{pick(current.message)}</p></div>
+            <div className="scene-story"><div className="scene-story-meta"><span className="eyebrow">{pick(current.name).toUpperCase()} MODE</span><span className="device-interaction-hint"><Hand aria-hidden="true" />{locale === 'en' ? 'Tap a device to adjust' : '点击设备即可调节'}<ChevronRight aria-hidden="true" /></span></div><h1>{pick(current.kicker)}</h1><p>{pick(current.message)}</p></div>
             <div className="hero-chips">
               <span className={temperatureSensor.on ? '' : 'is-offline'}><Thermometer aria-hidden="true" /> {temperatureSensor.on ? pick(temperatureSensor.value) : (locale === 'en' ? 'Temperature offline' : '温度传感器离线')}</span>
               <span className={airSensor.on ? '' : 'is-offline'}><Wind aria-hidden="true" /> {airSensor.on ? pick(airSensor.value) : (locale === 'en' ? 'Air sensor offline' : '空气传感器离线')}</span>
@@ -497,9 +497,9 @@ export default function Home() {
                     style={{ animationDelay: `${index * 48}ms` }}
                     aria-label={`${pick(load.name)}: ${pick(state.value)} · ${locale === 'en' ? 'Edit device settings' : '编辑设备设置'}`}
                   >
-                    <span className="load-node-icon"><LoadIcon aria-hidden="true" /></span>
+                    <span className="load-node-icon"><LoadIcon aria-hidden="true" /><span className="load-state-dot" aria-hidden="true" /></span>
                     <span className="load-node-copy"><strong>{pick(load.name)}</strong><small>{pick(state.value)}</small></span>
-                    <span className="load-state-dot" aria-hidden="true" />
+                    <ChevronRight className="load-edit-arrow" aria-hidden="true" />
                   </button>
                 );
               })}
@@ -535,6 +535,7 @@ export default function Home() {
                   <div className="security-emblem">{intrusion ? <ShieldAlert aria-hidden="true" /> : <ShieldCheck aria-hidden="true" />}</div>
                   <div><small>{locale === 'en' ? 'PERIMETER STATUS' : '周界状态'}</small><strong>{intrusion ? (locale === 'en' ? 'Motion detected' : '检测到移动') : (locale === 'en' ? 'Night Guard armed' : '夜间守护已布防')}</strong></div>
                 </div>
+                <div className="readonly-note">{locale === 'en' ? 'Camera & security status · View only' : '摄像头及安防状态 · 仅展示'}</div>
                 <div className="security-grid">
                   <SecurityItem icon={DoorClosed} label={locale === 'en' ? 'Doors' : '车门'} state={locale === 'en' ? 'Secured' : '已锁定'} alert={false} />
                   <SecurityItem icon={ScanLine} label={locale === 'en' ? 'Motion' : '移动侦测'} state={intrusion ? (locale === 'en' ? 'Detected' : '已检测') : (locale === 'en' ? 'Active' : '已开启')} alert={intrusion} />
@@ -543,7 +544,8 @@ export default function Home() {
                 </div>
                 <button className={intrusion ? 'alert-action dismiss-action' : 'alert-action'} onClick={() => setIntrusion(!intrusion)}>
                   {intrusion ? <X aria-hidden="true" /> : <ShieldAlert aria-hidden="true" />}
-                  {intrusion ? (locale === 'en' ? 'Resolve demo alert' : '解除演示警报') : (locale === 'en' ? 'Simulate motion' : '模拟移动入侵')}
+                  {intrusion ? (locale === 'en' ? 'Resolve demo alert' : '解除演示警报') : (locale === 'en' ? 'Tap to simulate motion' : '点击模拟移动入侵')}
+                  <ChevronRight aria-hidden="true" />
                 </button>
                 <button className="panel-loads-trigger" onClick={() => setLoadSheetOpen(true)}><Power aria-hidden="true" /><span>{locale === 'en' ? `View all ${visualLoads.length} devices` : `查看全部${visualLoads.length}项设备`}</span><ChevronRight aria-hidden="true" /></button>
               </>
@@ -554,7 +556,7 @@ export default function Home() {
                   <div className={`climate-orbit ${climateOn ? '' : 'is-off'}`}><Wind aria-hidden="true" /><span /></div>
                   <p>{temperatureSensor.on && airSensor.on ? <Check aria-hidden="true" /> : <Radio aria-hidden="true" />} {temperatureSensor.on && airSensor.on ? (locale === 'en' ? 'Temperature and air quality sensors are online' : '温度与空气质量传感器在线') : (locale === 'en' ? 'One or more environment sensors are offline' : '环境传感器存在离线')}</p>
                 </div>
-                <div className="active-load-heading"><span>{locale === 'en' ? 'Active devices' : '运行中设备'}</span><strong>{activeLoads.length}</strong></div>
+                <div className="active-load-heading"><span>{locale === 'en' ? 'Device status · View only' : '设备状态 · 仅展示'}</span><strong>{activeLoads.length}</strong></div>
                 {panelActiveLoads.length ? <div className="device-list active-load-list">{panelActiveLoads.map(load => {
                   const DeviceIcon = load.icon;
                   const state = getLoadState(load);
@@ -568,10 +570,10 @@ export default function Home() {
         </div>
 
         <nav className="scene-dock" aria-label={locale === 'en' ? 'RV scenes' : '房车场景'}>
-          <div className="scene-intro"><span className="eyebrow">{locale === 'en' ? 'ONE-TOUCH SCENES' : '一键场景'}</span><strong>{locale === 'en' ? 'How do you want to live?' : '此刻，你想怎样生活？'}</strong></div>
+          <div className="scene-intro"><span className="eyebrow">{locale === 'en' ? 'ONE-TOUCH SCENES' : '一键场景'}</span><strong>{locale === 'en' ? 'Tap a scene to begin' : '点击场景，一键联动'}</strong></div>
           <div className="scene-buttons">{sceneOrder.map(key => {
             const scene = scenes[key]; const SceneIcon = scene.sceneIcon; const selected = (pendingScene ?? activeScene) === key;
-            return <button key={key} className={selected ? 'scene-button is-selected' : 'scene-button'} onClick={() => activateScene(key)} aria-pressed={selected}><span className="scene-button-icon"><SceneIcon aria-hidden="true" /></span><span><strong>{pick(scene.name)}</strong><small>{scene.time}</small></span>{selected && <Check className="scene-check" aria-hidden="true" />}</button>;
+            return <button key={key} className={selected ? 'scene-button is-selected' : 'scene-button'} onClick={() => activateScene(key)} aria-pressed={selected}><span className="scene-button-icon"><SceneIcon aria-hidden="true" /></span><span><strong>{pick(scene.name)}</strong><small>{pendingScene === key ? (locale === 'en' ? 'Activating…' : '切换中…') : selected ? (locale === 'en' ? 'Active' : '当前场景') : (locale === 'en' ? 'Tap to activate' : '点击切换')}</small></span>{selected ? <Check className="scene-check" aria-hidden="true" /> : <ChevronRight className="scene-action-arrow" aria-hidden="true" />}</button>;
           })}</div>
           <div className="efficiency-pill"><Gauge aria-hidden="true" /><div><strong>94%</strong><small>{locale === 'en' ? 'Energy efficiency' : '能源效率'}</small></div></div>
         </nav>
@@ -589,6 +591,7 @@ export default function Home() {
           </div>
           <SheetClose className="sheet-close-button" aria-label={locale === 'en' ? 'Close device status' : '关闭设备状态'}><X aria-hidden="true" /></SheetClose>
         </SheetHeader>
+        {!selectedLoad && <p className="sheet-interaction-hint"><Hand aria-hidden="true" />{locale === 'en' ? 'Tap a device for settings · Use its switch for quick control · Sensors are view only' : '点击设备调节参数 · 拨动开关快捷操作 · 传感器仅查看数据'}</p>}
         {selectedLoad ? (
           <DeviceControlPanel
             device={selectedLoad}
