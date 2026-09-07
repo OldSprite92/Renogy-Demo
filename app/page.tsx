@@ -424,9 +424,11 @@ export default function Home() {
               <div><span className="eyebrow">{locale === 'en' ? 'ENERGY SYSTEM' : '能源系统'}</span><h2>{locale === 'en' ? 'Power flow' : '能量流'}</h2></div>
               <span className="healthy-badge"><CircleDot aria-hidden="true" /> {locale === 'en' ? 'Healthy' : '正常'}</span>
             </div>
-            <div className={`battery-orbit ${batteryIsCharging ? 'is-charging' : 'is-discharging'}`} aria-label={locale === 'en' ? `Battery state of charge 82 percent, ${batteryFlowLabel.toLowerCase()} at ${batteryFlowPower}` : `电池电量82%，${batteryFlowLabel}，功率${batteryFlowPower}`}>
+            <div className={`battery-summary ${batteryIsCharging ? 'is-charging' : 'is-discharging'}`}>
+            <div className="battery-orbit" aria-label={locale === 'en' ? 'Battery state of charge 82 percent' : '电池电量82%'}>
               <div className="battery-ring"><div><BatteryCharging aria-hidden="true" /><strong>82<span>%</span></strong><small>{locale === 'en' ? 'Battery' : '电池电量'}</small></div></div>
               <span className="orbit-dot" aria-hidden="true" />
+            </div>
               <span className="battery-flow-status" role="status"><span className="battery-flow-direction">{batteryIsCharging ? <ArrowDown aria-hidden="true" /> : <ArrowUp aria-hidden="true" />}{batteryFlowLabel}</span><strong>{batteryFlowPower}</strong></span>
             </div>
             <div className="energy-metrics">

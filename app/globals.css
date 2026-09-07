@@ -66,7 +66,10 @@ svg { stroke-width: 1.8; }
 .healthy-badge svg { width: 10px; height: 10px; fill: currentColor; }
 .panel-title-icon { width: 22px; color: var(--blue); }
 
-.battery-orbit { position: relative; width: 126px; height: 126px; margin: 16px auto 11px; display: grid; place-items: center; border: 1px solid rgba(104,213,229,.08); border-radius: 50%; }
+.energy-panel { overflow-y: auto; }
+.battery-summary { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 16px 0 12px; }
+.battery-summary .battery-orbit { margin: 0; flex-shrink: 0; }
+.battery-orbit { position: relative; width: 126px; height: 126px; display: grid; place-items: center; border: 1px solid rgba(104,213,229,.08); border-radius: 50%; }
 .battery-orbit::before, .battery-orbit::after { content: ""; position: absolute; border-radius: inherit; }
 .battery-orbit::before { inset: 7px; border: 1px dashed rgba(92,203,220,.17); }
 .battery-orbit::after { inset: -1px; background: conic-gradient(from 20deg, transparent 0 19%, rgba(36,173,211,.44) 22%, transparent 25% 73%, rgba(23,144,155,.34) 77%, transparent 80%); filter: blur(1px); animation: orbit 10s linear infinite; }
@@ -78,14 +81,14 @@ svg { stroke-width: 1.8; }
 .battery-ring strong span { margin-left: 2px; font-size: 12px; line-height: 1; letter-spacing: 0; color: var(--muted); }
 .battery-ring small { color: var(--muted); font-size: 10px; line-height: 1.2; white-space: nowrap; }
 .orbit-dot { position: absolute; z-index: 2; top: 10px; right: 21px; width: 6px; height: 6px; border-radius: 50%; background: #8fe9f4; box-shadow: 0 0 14px #66d2e7; }
-.battery-flow-status { position: absolute; z-index: 3; bottom: -7px; min-width: max-content; min-height: 23px; display: inline-flex; align-items: center; gap: 6px; padding: 0 8px; border: 1px solid rgba(85,214,161,.28); border-radius: 99px; background: #0b2024; color: #86e6ba; box-shadow: 0 5px 14px rgba(0,0,0,.26); font-size: 8px; line-height: 1; white-space: nowrap; }
-.battery-flow-status strong { color: #dff9ec; font-size: 9px; font-variant-numeric: tabular-nums; }
+.battery-flow-status { max-width: 100%; min-height: 26px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; padding: 5px 8px; border: 1px solid rgba(85,214,161,.28); border-radius: 99px; background: #0b2024; color: #86e6ba; font-size: 11px; line-height: 1.2; }
+.battery-flow-status strong { color: #dff9ec; font-size: 11px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .battery-flow-direction { display: inline-flex; align-items: center; gap: 3px; font-weight: 720; }
 .battery-flow-direction svg { width: 10px; height: 10px; stroke-width: 2.4; }
-.battery-orbit.is-discharging .battery-flow-status { border-color: rgba(241,179,89,.32); background: #211c14; color: #f0bd74; }
-.battery-orbit.is-discharging .battery-flow-status strong { color: #ffe7bd; }
-.battery-orbit.is-discharging .orbit-dot { background: #f0b766; box-shadow: 0 0 14px rgba(240,183,102,.8); }
-.battery-orbit.is-discharging::after { animation-direction: reverse; }
+.battery-summary.is-discharging .battery-flow-status { border-color: rgba(241,179,89,.32); background: #211c14; color: #f0bd74; }
+.battery-summary.is-discharging .battery-flow-status strong { color: #ffe7bd; }
+.battery-summary.is-discharging .orbit-dot { background: #f0b766; box-shadow: 0 0 14px rgba(240,183,102,.8); }
+.battery-summary.is-discharging .battery-orbit::after { animation-direction: reverse; }
 .energy-metrics { display: grid; gap: 6px; }
 .metric-row { min-height: 39px; display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid rgba(255,255,255,.045); border-radius: 11px; background: rgba(255,255,255,.022); }
 .metric-icon { width: 29px; height: 29px; display: grid; place-items: center; border-radius: 9px; }
@@ -463,7 +466,8 @@ svg { stroke-width: 1.8; }
   .workspace-grid { grid-template-columns: 195px minmax(390px,1fr) 262px; gap: 9px; }
   .dashboard { gap: 9px; padding: 10px 11px 12px; }
   .panel { padding: 13px; }
-  .battery-orbit { width: 113px; height: 113px; margin-block: 11px 7px; }
+  .battery-summary { margin-block: 11px 10px; }
+  .battery-orbit { width: 113px; height: 113px; }
   .battery-ring { width: 86px; height: 86px; }
   .scene-story { top: 22px; left: 22px; }
   .scene-story h1 { font-size: clamp(23px,2.5vw,31px); }
@@ -494,7 +498,8 @@ svg { stroke-width: 1.8; }
   .topbar { height: 61px; }
   .dashboard { height: calc(100svh - 61px); min-height: 539px; grid-template-rows: minmax(0,1fr) 77px; padding-block: 9px 10px; }
   .brand-logo { height: 37px; }
-  .battery-orbit { width: 102px; height: 102px; margin-block: 9px 6px; }
+  .battery-summary { gap: 6px; margin-block: 9px 8px; }
+  .battery-orbit { width: 102px; height: 102px; }
   .battery-ring { width: 78px; height: 78px; }
   .battery-ring strong { font-size: 21px; }
   .metric-row { min-height: 35px; }
