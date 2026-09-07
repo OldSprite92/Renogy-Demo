@@ -349,7 +349,7 @@ svg { stroke-width: 1.8; }
 .sheet-load-card strong { font-size: 14px; }
 .sheet-load-card small { color: #9ce0e8; font-size: 11px; }
 .sheet-load-card.is-off small { color: #839198; }
-.sheet-state-badge { padding: 4px 7px; border-radius: 6px; background: rgba(85,214,161,.08); color: #71ddaa; font-size: 9px; font-weight: 700; letter-spacing: .04em; white-space: nowrap; }
+.sheet-state-badge { align-self: center; justify-self: end; padding: 4px 7px; border-radius: 6px; background: rgba(85,214,161,.08); color: #71ddaa; font-size: 9px; font-weight: 700; letter-spacing: .04em; line-height: 1.2; white-space: nowrap; }
 .sheet-load-card.is-off .sheet-state-badge { background: rgba(255,255,255,.04); color: #7d8b90; }
 .sheet-card-chevron { width: 14px; color: #6d8992; transition: transform .16s ease, color .16s ease; }
 .sheet-card-detail:hover .sheet-card-chevron { color: #8de6f1; transform: translateX(2px); }
