@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  Armchair, ArrowLeft, BatteryCharging, Blinds, Camera, Check, ChevronRight, CircleDot,
+  Armchair, ArrowDown, ArrowLeft, ArrowUp, BatteryCharging, Blinds, Camera, Check, ChevronRight, CircleDot,
   DoorClosed, Droplets, Film, Gauge, Languages, Lamp, Leaf, Lock, MapPin, Moon,
   Power, Radio, RotateCcw, ScanLine, ShieldAlert, ShieldCheck, Siren, Snowflake,
   Sparkles, Sun, TentTree, Thermometer, Tv, Volume2, Waves, Wifi, Wind, X, Zap,
@@ -293,6 +293,11 @@ export default function Home() {
   const current = scenes[activeScene];
   const preview = scenes[pendingScene ?? activeScene];
   const PreviewIcon = preview.sceneIcon;
+  const batteryIsCharging = !current.batteryFlow.trim().startsWith('-');
+  const batteryFlowPower = current.batteryFlow.replace(/^[+-]/, '');
+  const batteryFlowLabel = batteryIsCharging
+    ? (locale === 'en' ? 'Charging' : '充电中')
+    : (locale === 'en' ? 'Discharging' : '放电中');
   const pick = (value: Localized) => value[locale];
   const getLoadState = (load: VisualLoad, scene: SceneKey = activeScene): LoadState => {
     const override = loadOverrides[scene]?.[load.key];
@@ -419,13 +424,14 @@ export default function Home() {
               <div><span className="eyebrow">{locale === 'en' ? 'ENERGY SYSTEM' : '能源系统'}</span><h2>{locale === 'en' ? 'Power flow' : '能量流'}</h2></div>
               <span className="healthy-badge"><CircleDot aria-hidden="true" /> {locale === 'en' ? 'Healthy' : '正常'}</span>
             </div>
-            <div className="battery-orbit" aria-label={locale === 'en' ? 'Battery state of charge 82 percent' : '电池电量82%'}>
+            <div className={`battery-orbit ${batteryIsCharging ? 'is-charging' : 'is-discharging'}`} aria-label={locale === 'en' ? `Battery state of charge 82 percent, ${batteryFlowLabel.toLowerCase()} at ${batteryFlowPower}` : `电池电量82%，${batteryFlowLabel}，功率${batteryFlowPower}`}>
               <div className="battery-ring"><div><BatteryCharging aria-hidden="true" /><strong>82<span>%</span></strong><small>{locale === 'en' ? 'Battery' : '电池电量'}</small></div></div>
               <span className="orbit-dot" aria-hidden="true" />
+              <span className="battery-flow-status" role="status"><span className="battery-flow-direction">{batteryIsCharging ? <ArrowDown aria-hidden="true" /> : <ArrowUp aria-hidden="true" />}{batteryFlowLabel}</span><strong>{batteryFlowPower}</strong></span>
             </div>
             <div className="energy-metrics">
               <Metric icon={Sun} label={locale === 'en' ? 'Solar' : '太阳能'} value={current.solar} tone="cyan" />
-              <Metric icon={BatteryCharging} label={locale === 'en' ? 'Battery' : '电池'} value={current.batteryFlow} tone="green" />
+              <Metric icon={BatteryCharging} label={locale === 'en' ? (batteryIsCharging ? 'Battery charging' : 'Battery discharge') : (batteryIsCharging ? '电池充电' : '电池放电')} value={current.batteryFlow} tone={batteryIsCharging ? 'green' : 'amber'} />
               <Metric icon={Power} label={locale === 'en' ? 'RV load' : '房车负载'} value={current.load} tone="violet" />
             </div>
             <div className="flow-rail" aria-hidden="true"><span className="flow-line" /><span className="flow-pulse pulse-one" /><span className="flow-pulse pulse-two" /></div>

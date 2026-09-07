@@ -78,12 +78,21 @@ svg { stroke-width: 1.8; }
 .battery-ring strong span { margin-left: 2px; font-size: 12px; line-height: 1; letter-spacing: 0; color: var(--muted); }
 .battery-ring small { color: var(--muted); font-size: 10px; line-height: 1.2; white-space: nowrap; }
 .orbit-dot { position: absolute; z-index: 2; top: 10px; right: 21px; width: 6px; height: 6px; border-radius: 50%; background: #8fe9f4; box-shadow: 0 0 14px #66d2e7; }
+.battery-flow-status { position: absolute; z-index: 3; bottom: -7px; min-width: max-content; min-height: 23px; display: inline-flex; align-items: center; gap: 6px; padding: 0 8px; border: 1px solid rgba(85,214,161,.28); border-radius: 99px; background: #0b2024; color: #86e6ba; box-shadow: 0 5px 14px rgba(0,0,0,.26); font-size: 8px; line-height: 1; white-space: nowrap; }
+.battery-flow-status strong { color: #dff9ec; font-size: 9px; font-variant-numeric: tabular-nums; }
+.battery-flow-direction { display: inline-flex; align-items: center; gap: 3px; font-weight: 720; }
+.battery-flow-direction svg { width: 10px; height: 10px; stroke-width: 2.4; }
+.battery-orbit.is-discharging .battery-flow-status { border-color: rgba(241,179,89,.32); background: #211c14; color: #f0bd74; }
+.battery-orbit.is-discharging .battery-flow-status strong { color: #ffe7bd; }
+.battery-orbit.is-discharging .orbit-dot { background: #f0b766; box-shadow: 0 0 14px rgba(240,183,102,.8); }
+.battery-orbit.is-discharging::after { animation-direction: reverse; }
 .energy-metrics { display: grid; gap: 6px; }
 .metric-row { min-height: 39px; display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid rgba(255,255,255,.045); border-radius: 11px; background: rgba(255,255,255,.022); }
 .metric-icon { width: 29px; height: 29px; display: grid; place-items: center; border-radius: 9px; }
 .metric-icon svg { width: 14px; }
 .metric-cyan { color: #60d4e9; background: rgba(36,173,211,.11); }
 .metric-green { color: #67dfa9; background: rgba(85,214,161,.1); }
+.metric-amber { color: #f0bd74; background: rgba(241,179,89,.1); }
 .metric-violet { color: #b6aafb; background: rgba(160,145,246,.1); }
 .metric-row > span:nth-child(2) { color: var(--muted); font-size: 11px; }
 .metric-row strong { font-size: 13px; font-variant-numeric: tabular-nums; }
