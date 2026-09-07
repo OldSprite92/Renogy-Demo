@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Switch } from '@/components/ui/switch';
 
 type Locale = 'en' | 'zh';
 type SceneKey = 'camp' | 'away' | 'movie' | 'sleep';
@@ -360,6 +361,15 @@ export default function Home() {
   function toggleLoad(load: VisualLoad) {
     if (load.kind === 'sensor') return;
     const next = !getLoadState(load).on;
+    setDeviceControls(previous => {
+      const currentControls = previous[load.key] ?? {};
+      const nextControls = { ...currentControls };
+      if (load.key === 'shades') nextControls.position = next ? 100 : 0;
+      if (load.key === 'lights' && next && Number(nextControls.brightness ?? 0) === 0) nextControls.brightness = 65;
+      if (load.key === 'ambient' && next && Number(nextControls.brightness ?? 0) === 0) nextControls.brightness = 35;
+      if (load.key === 'audio' && next && Number(nextControls.volume ?? 0) === 0) nextControls.volume = 28;
+      return { ...previous, [load.key]: nextControls };
+    });
     setLoadOverrides(previous => ({ ...previous, [activeScene]: { ...previous[activeScene], [load.key]: next } }));
   }
 
@@ -584,7 +594,33 @@ export default function Home() {
             {visualLoads.map(load => {
               const LoadIcon = load.icon;
               const state = getLoadState(load);
-              return <button className={`sheet-load-card ${load.kind === 'sensor' ? 'is-sensor' : ''} ${state.on ? 'is-on' : 'is-off'}`} type="button" key={load.key} onClick={() => setSelectedLoadKey(load.key)}><span className="sheet-load-icon"><LoadIcon aria-hidden="true" /></span><span className="sheet-load-copy"><strong>{pick(load.name)}</strong><small>{pick(state.value)}</small></span><span className="sheet-state-badge">{load.kind === 'sensor' ? (locale === 'en' ? 'MONITORING' : '监测中') : (state.on ? (locale === 'en' ? 'ACTIVE' : '运行') : (locale === 'en' ? 'OFF / STANDBY' : '关闭 / 待机'))}</span><ChevronRight className="sheet-card-chevron" aria-hidden="true" /></button>;
+              const quickStateLabel = load.key === 'shades'
+                ? (state.on ? (locale === 'en' ? 'OPEN' : '开') : (locale === 'en' ? 'CLOSED' : '合'))
+                : load.key === 'lock'
+                  ? (state.on ? (locale === 'en' ? 'LOCKED' : '已锁') : (locale === 'en' ? 'UNLOCKED' : '未锁'))
+                  : (state.on ? (locale === 'en' ? 'ON' : '开') : (locale === 'en' ? 'OFF' : '关'));
+              return (
+                <div className={`sheet-load-card ${load.kind === 'sensor' ? 'is-sensor' : ''} ${state.on ? 'is-on' : 'is-off'}`} key={load.key}>
+                  <button className="sheet-card-detail" type="button" onClick={() => setSelectedLoadKey(load.key)} aria-label={`${pick(load.name)} · ${pick(state.value)} · ${locale === 'en' ? 'Open controls' : '打开控制面板'}`}>
+                    <span className="sheet-load-icon"><LoadIcon aria-hidden="true" /></span>
+                    <span className="sheet-load-copy"><strong>{pick(load.name)}</strong><small>{pick(state.value)}</small></span>
+                    <ChevronRight className="sheet-card-chevron" aria-hidden="true" />
+                  </button>
+                  {load.kind === 'sensor' ? (
+                    <span className="sheet-state-badge">{locale === 'en' ? 'MONITORING' : '监测中'}</span>
+                  ) : (
+                    <div className="sheet-quick-control">
+                      <span aria-hidden="true">{quickStateLabel}</span>
+                      <Switch
+                        className="card-quick-switch"
+                        checked={state.on}
+                        onCheckedChange={() => toggleLoad(load)}
+                        aria-label={`${locale === 'en' ? 'Quick control' : '快捷控制'} · ${pick(load.name)} · ${quickStateLabel}`}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
             })}
           </div>
         )}
