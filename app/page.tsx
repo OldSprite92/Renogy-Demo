@@ -8,6 +8,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
 
@@ -118,6 +119,49 @@ const scenes: Record<SceneKey, Scene> = {
 };
 
 const sceneOrder: SceneKey[] = ['camp', 'away', 'movie', 'sleep'];
+
+const energyInsights: Record<SceneKey, {
+  score: number;
+  grade: Localized;
+  summary: Localized;
+  explanation: Localized;
+  opportunity: Localized;
+  actions: Localized[];
+  factors: { name: Localized; weight: number; score: number }[];
+}> = {
+  camp: {
+    score: 91, grade: { en: 'Excellent', zh: '优秀' },
+    summary: { en: 'Comfort and charging are well balanced', zh: '舒适体验与充电效率保持均衡' },
+    explanation: { en: 'Strong solar input covers the active cabin loads and still leaves surplus energy for the battery.', zh: '太阳能输入能够覆盖当前舱内负载，并保留余量为电池充电。' },
+    opportunity: { en: 'Turning off idle entertainment devices could raise the score by 3 points.', zh: '关闭闲置影音设备，预计还可提升3分。' },
+    actions: [{ en: 'Solar surplus is charging the battery', zh: '太阳能余量正在为电池充电' }, { en: 'Climate holds 23°C in Auto', zh: '空调以自动模式维持23°C' }, { en: 'Inverter uses Balanced mode', zh: '逆变器运行于均衡模式' }],
+    factors: [{ name: { en: 'Load scheduling', zh: '负载调度' }, weight: 35, score: 92 }, { name: { en: 'Standby control', zh: '待机管理' }, weight: 25, score: 88 }, { name: { en: 'Power conversion', zh: '电能转换' }, weight: 25, score: 94 }, { name: { en: 'Renewable use', zh: '清洁能源利用' }, weight: 15, score: 88 }],
+  },
+  away: {
+    score: 97, grade: { en: 'Optimal', zh: '卓越' },
+    summary: { en: 'Only protection and essential systems remain active', zh: '仅保留安防和必要系统运行' },
+    explanation: { en: 'Comfort loads are suspended while solar generation is prioritized for battery recovery.', zh: '舒适类负载已暂停，太阳能优先用于补充电池续航。' },
+    opportunity: { en: 'This scene is already near its practical efficiency limit.', zh: '该场景已接近当前配置下的最佳能效。' },
+    actions: [{ en: 'Cabin comfort loads are off', zh: '舱内舒适类负载已关闭' }, { en: 'Solar charging has priority', zh: '太阳能充电处于优先级' }, { en: 'Inverter is in Eco mode', zh: '逆变器已进入节能模式' }],
+    factors: [{ name: { en: 'Load scheduling', zh: '负载调度' }, weight: 35, score: 99 }, { name: { en: 'Standby control', zh: '待机管理' }, weight: 25, score: 98 }, { name: { en: 'Power conversion', zh: '电能转换' }, weight: 25, score: 94 }, { name: { en: 'Renewable use', zh: '清洁能源利用' }, weight: 15, score: 96 }],
+  },
+  movie: {
+    score: 86, grade: { en: 'Good', zh: '良好' },
+    summary: { en: 'Immersive comfort uses more available energy', zh: '沉浸体验正在使用更多可用能源' },
+    explanation: { en: 'Entertainment, spatial audio and performance power are active together while solar input is limited.', zh: '影音、空间音响和性能供电同时运行，且当前太阳能输入有限。' },
+    opportunity: { en: 'Returning the inverter to Balanced mode after the movie could recover 5 points.', zh: '观影结束后将逆变器恢复至均衡模式，预计可提升5分。' },
+    actions: [{ en: 'Main lights are off', zh: '主灯已关闭' }, { en: 'Ambient lighting is limited to 30%', zh: '氛围灯限制在30%' }, { en: 'Performance power supports cinema loads', zh: '性能供电正在保障影院负载' }],
+    factors: [{ name: { en: 'Load scheduling', zh: '负载调度' }, weight: 35, score: 84 }, { name: { en: 'Standby control', zh: '待机管理' }, weight: 25, score: 85 }, { name: { en: 'Power conversion', zh: '电能转换' }, weight: 25, score: 92 }, { name: { en: 'Renewable use', zh: '清洁能源利用' }, weight: 15, score: 82 }],
+  },
+  sleep: {
+    score: 94, grade: { en: 'Excellent', zh: '优秀' },
+    summary: { en: 'Quiet comfort runs with tightly managed power', zh: '静音舒适体验正在精细控制能耗' },
+    explanation: { en: 'Lighting and entertainment loads are off while climate, humidity and security run in low-power modes.', zh: '照明与影音负载已关闭，空调、加湿和安防以低功耗模式运行。' },
+    opportunity: { en: 'Raising the climate target by 1°C could add another 2 points.', zh: '将空调目标温度提高1°C，预计还可提升2分。' },
+    actions: [{ en: 'Main lights and entertainment are off', zh: '主灯和影音设备已关闭' }, { en: 'Inverter uses Silent mode', zh: '逆变器运行于静音模式' }, { en: 'Night comfort loads are coordinated', zh: '夜间舒适负载已协同调度' }],
+    factors: [{ name: { en: 'Load scheduling', zh: '负载调度' }, weight: 35, score: 96 }, { name: { en: 'Standby control', zh: '待机管理' }, weight: 25, score: 92 }, { name: { en: 'Power conversion', zh: '电能转换' }, weight: 25, score: 94 }, { name: { en: 'Renewable use', zh: '清洁能源利用' }, weight: 15, score: 92 }],
+  },
+};
 
 const visualLoads: VisualLoad[] = [
   {
@@ -288,9 +332,13 @@ export default function Home() {
   const [loadSheetOpen, setLoadSheetOpen] = useState(false);
   const [loadOverrides, setLoadOverrides] = useState<LoadOverrides>({});
   const [selectedLoadKey, setSelectedLoadKey] = useState<LoadKey | null>(null);
+  const [efficiencyOpen, setEfficiencyOpen] = useState(false);
+  const [efficiencyScene, setEfficiencyScene] = useState<SceneKey>('camp');
   const [deviceControls, setDeviceControls] = useState<DeviceControls>(() => createSceneControls('camp'));
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const current = scenes[activeScene];
+  const activeEnergyInsight = energyInsights[activeScene];
+  const selectedEnergyInsight = energyInsights[efficiencyScene];
   const preview = scenes[pendingScene ?? activeScene];
   const PreviewIcon = preview.sceneIcon;
   const batteryIsCharging = !current.batteryFlow.trim().startsWith('-');
@@ -360,7 +408,7 @@ export default function Home() {
 
   function resetDemo() {
     if (timer.current) clearTimeout(timer.current);
-    setPendingScene(null); setIntrusion(false); setActiveScene('camp'); setLoadOverrides({}); setDeviceControls(createSceneControls('camp')); setSelectedLoadKey(null); setLoadSheetOpen(false);
+    setPendingScene(null); setIntrusion(false); setActiveScene('camp'); setLoadOverrides({}); setDeviceControls(createSceneControls('camp')); setSelectedLoadKey(null); setLoadSheetOpen(false); setEfficiencyOpen(false); setEfficiencyScene('camp');
   }
 
   function toggleLoad(load: VisualLoad) {
@@ -398,6 +446,7 @@ export default function Home() {
   }
 
   return (
+    <>
     <Sheet open={loadSheetOpen} onOpenChange={handleSheetOpenChange}>
     <main className={`app-shell scene-${activeScene} ${intrusion ? 'is-alert' : ''}`}>
       <header className="topbar">
@@ -575,7 +624,7 @@ export default function Home() {
             const scene = scenes[key]; const SceneIcon = scene.sceneIcon; const selected = (pendingScene ?? activeScene) === key;
             return <button key={key} className={selected ? 'scene-button is-selected' : 'scene-button'} onClick={() => activateScene(key)} aria-pressed={selected}><span className="scene-button-icon"><SceneIcon aria-hidden="true" /></span><span><strong>{pick(scene.name)}</strong><small>{pendingScene === key ? (locale === 'en' ? 'Activating…' : '切换中…') : selected ? (locale === 'en' ? 'Active' : '当前场景') : (locale === 'en' ? 'Tap to activate' : '点击切换')}</small></span>{selected ? <Check className="scene-check" aria-hidden="true" /> : <ChevronRight className="scene-action-arrow" aria-hidden="true" />}</button>;
           })}</div>
-          <div className="efficiency-pill"><Gauge aria-hidden="true" /><div><strong>94%</strong><small>{locale === 'en' ? 'Energy efficiency' : '能源效率'}</small></div></div>
+          <button className="efficiency-pill" type="button" onClick={() => { setEfficiencyScene(activeScene); setEfficiencyOpen(true); }} aria-haspopup="dialog" aria-label={locale === 'en' ? `Energy optimization score ${activeEnergyInsight.score}, view details` : `能源优化评分${activeEnergyInsight.score}分，查看详情`}><Gauge aria-hidden="true" /><div><strong>{activeEnergyInsight.score}<span>{locale === 'en' ? '/100' : '分'}</span></strong><small>{locale === 'en' ? 'Optimization · Details' : '能源优化 · 详情'}</small></div><ChevronRight aria-hidden="true" /></button>
         </nav>
       </div>
 
@@ -640,6 +689,31 @@ export default function Home() {
       </SheetContent>
     </main>
     </Sheet>
+    <Dialog open={efficiencyOpen} onOpenChange={setEfficiencyOpen}>
+      <DialogContent className="efficiency-dialog" showCloseButton={false}>
+        <DialogHeader className="efficiency-dialog-header">
+          <div><span className="eyebrow">RENOGY INTELLIGENT ENERGY</span><DialogTitle>{locale === 'en' ? 'Energy optimization score' : '能源优化评分'}</DialogTitle><DialogDescription>{locale === 'en' ? 'How the current scene balances comfort, power and available energy.' : '了解当前场景如何平衡舒适体验、负载功耗与可用能源。'}</DialogDescription></div>
+          <DialogClose className="efficiency-close" aria-label={locale === 'en' ? 'Close energy details' : '关闭能源详情'}><X aria-hidden="true" /></DialogClose>
+        </DialogHeader>
+        <div className="efficiency-overview">
+          <div className="efficiency-score-orbit"><Gauge aria-hidden="true" /><strong>{selectedEnergyInsight.score}<span>/100</span></strong><small>{pick(selectedEnergyInsight.grade)}</small></div>
+          <div className="efficiency-explanation"><span>{pick(scenes[efficiencyScene].name)} {locale === 'en' ? 'MODE' : '模式'}</span><h3>{pick(selectedEnergyInsight.summary)}</h3><p>{pick(selectedEnergyInsight.explanation)}</p></div>
+        </div>
+        <div className="efficiency-scene-tabs" aria-label={locale === 'en' ? 'Compare scene scores' : '对比场景评分'}>
+          {sceneOrder.map(key => { const SceneIcon = scenes[key].sceneIcon; const selected = efficiencyScene === key; return <button type="button" key={key} className={selected ? 'is-selected' : ''} onClick={() => setEfficiencyScene(key)} aria-pressed={selected}><SceneIcon aria-hidden="true" /><span><strong>{pick(scenes[key].name)}</strong><small>{locale === 'en' ? 'View breakdown' : '查看构成'}</small></span><b>{energyInsights[key].score}</b></button>; })}
+        </div>
+        <section className="efficiency-breakdown" aria-labelledby="efficiency-breakdown-title">
+          <div className="efficiency-section-heading"><div><span className="eyebrow">WEIGHTED MODEL</span><h3 id="efficiency-breakdown-title">{locale === 'en' ? 'Score breakdown' : '评分构成'}</h3></div><small>{locale === 'en' ? 'Weighted total' : '加权计算'}</small></div>
+          <div className="efficiency-factor-grid">{selectedEnergyInsight.factors.map(factor => <div className="efficiency-factor" key={factor.name.en}><div><span>{pick(factor.name)} <small>{factor.weight}%</small></span><strong>{factor.score}</strong></div><span className="efficiency-factor-bar"><i style={{ width: `${factor.score}%` }} /></span></div>)}</div>
+        </section>
+        <div className="efficiency-detail-grid">
+          <section className="efficiency-actions"><span className="eyebrow">{locale === 'en' ? 'ACTIVE OPTIMIZATIONS' : '当前优化动作'}</span>{selectedEnergyInsight.actions.map(action => <p key={action.en}><Check aria-hidden="true" />{pick(action)}</p>)}</section>
+          <section className="efficiency-opportunity"><Sparkles aria-hidden="true" /><div><span>{locale === 'en' ? 'NEXT OPPORTUNITY' : '下一步建议'}</span><p>{pick(selectedEnergyInsight.opportunity)}</p></div></section>
+        </div>
+        <p className="efficiency-model-note">{locale === 'en' ? 'Concept score based on the current scene configuration and simulated demo data.' : '概念评分依据当前场景配置与模拟演示数据计算。'}</p>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 
