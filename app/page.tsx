@@ -3,10 +3,11 @@
 import {
   Armchair, ArrowDown, ArrowLeft, ArrowUp, Battery, BatteryCharging, Blinds, Camera, Check, ChevronRight, CircleDot,
   CookingPot, DoorClosed, Droplets, Film, Gauge, Hand, Languages, Lamp, Leaf, Lock, MapPin, Microwave, Moon,
-  Power, Radio, RotateCcw, ScanLine, ShieldAlert, ShieldCheck, Siren, Snowflake,
+  Power, Radar, Radio, RotateCcw, ScanLine, ShieldAlert, ShieldCheck, Siren, Snowflake,
   Sparkles, Sun, TentTree, Thermometer, Tv, Volume2, Waves, Wifi, Wind, X, Zap,
   type LucideIcon,
 } from 'lucide-react';
+import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -34,6 +35,13 @@ const iconMap: Record<IconName, LucideIcon> = {
   lamp: Lamp, climate: Snowflake, tv: Tv, audio: Volume2, humidifier: Droplets,
   inverter: Zap, lock: Lock, blinds: Blinds,
 };
+
+const sentryCameras = [
+  { id: '01', position: 'front', label: { en: 'Front approach', zh: '车头前方' }, detectsIntrusion: false },
+  { id: '02', position: 'entry', label: { en: 'Entry side', zh: '车门侧' }, detectsIntrusion: true },
+  { id: '03', position: 'rear', label: { en: 'Rear perimeter', zh: '车尾后方' }, detectsIntrusion: false },
+  { id: '04', position: 'camp', label: { en: 'Camp side', zh: '营地侧' }, detectsIntrusion: false },
+] as const;
 
 const scenes: Record<SceneKey, Scene> = {
   camp: {
@@ -635,27 +643,35 @@ export default function Home() {
 
           <aside className="panel systems-panel">
             <div className="panel-heading">
-              <div><span className="eyebrow">{current.security ? (locale === 'en' ? 'NIGHT GUARD' : '夜间守护') : (locale === 'en' ? 'SMART LIVING' : '智能生活')}</span><h2>{current.security ? (locale === 'en' ? 'Security' : '安防') : (locale === 'en' ? 'Cabin systems' : '舱内系统')}</h2></div>
+              <div><span className="eyebrow">{current.security ? (locale === 'en' ? '360° SENTINEL' : '360° 哨兵守护') : (locale === 'en' ? 'SMART LIVING' : '智能生活')}</span><h2>{current.security ? (locale === 'en' ? 'Security' : '安防') : (locale === 'en' ? 'Cabin systems' : '舱内系统')}</h2></div>
               {current.security ? <ShieldCheck className="panel-title-icon" aria-hidden="true" /> : <Armchair className="panel-title-icon" aria-hidden="true" />}
             </div>
             {current.security ? (
               <>
-                <div className={`camera-feed ${intrusion ? 'camera-alert' : ''}`}>
-                  <img src="/assets/exterior-camera.webp" alt={locale === 'en' ? 'Exterior camera view of the RV entrance' : '房车入口外部摄像头画面'} />
-                  <div className="camera-overlay" aria-hidden="true" />
-                  <div className="camera-topline"><span className={intrusion ? 'live-pill alert-pill' : 'live-pill'}><Radio aria-hidden="true" /> LIVE</span><span>CAM 01 · {current.time}</span></div>
-                  {intrusion ? <div className="detection-box"><span>{locale === 'en' ? 'PERSON · 98%' : '人员 · 98%'}</span></div> : <div className="scan-beam" aria-hidden="true" />}
-                  <div className="camera-caption"><Camera aria-hidden="true" /> {locale === 'en' ? 'RV entrance' : '房车入口'}</div>
-                </div>
+                <figure className="sentry-camera-wall" aria-label={locale === 'en' ? 'Four live cameras providing complete perimeter coverage' : '四路实时摄像头，全方位覆盖房车周界'}>
+                  {sentryCameras.map(camera => {
+                    const cameraAlert = intrusion && camera.detectsIntrusion;
+                    return (
+                      <div className={`sentry-camera camera-${camera.position} ${cameraAlert ? 'is-alert' : ''}`} key={camera.id}>
+                        <Image className="sentry-camera-image" src="/assets/sentry-cameras.png" width={1024} height={683} sizes="150px" alt={`${locale === 'en' ? camera.label.en : camera.label.zh} ${locale === 'en' ? 'live camera view' : '实时摄像头画面'}`} />
+                        <div className="camera-overlay" aria-hidden="true" />
+                        <div className="sentry-camera-topline"><span className={cameraAlert ? 'sentry-live is-alert' : 'sentry-live'}><Radio aria-hidden="true" /> {cameraAlert ? (locale === 'en' ? 'ALERT' : '告警') : 'LIVE'}</span><span>CAM {camera.id}</span></div>
+                        {cameraAlert ? <div className="sentry-detection"><span>{locale === 'en' ? 'PERSON · 98%' : '人员 · 98%'}</span></div> : <div className="sentry-scan" aria-hidden="true" />}
+                        <div className="sentry-camera-caption"><Camera aria-hidden="true" /> {locale === 'en' ? camera.label.en : camera.label.zh}</div>
+                      </div>
+                    );
+                  })}
+                </figure>
                 <div className={`security-status ${intrusion ? 'security-alert' : ''}`}>
-                  <div className="security-emblem">{intrusion ? <ShieldAlert aria-hidden="true" /> : <ShieldCheck aria-hidden="true" />}</div>
-                  <div><small>{locale === 'en' ? 'PERIMETER STATUS' : '周界状态'}</small><strong>{intrusion ? (locale === 'en' ? 'Motion detected' : '检测到移动') : (locale === 'en' ? 'Night Guard armed' : '夜间守护已布防')}</strong></div>
+                  <div className="security-emblem">{intrusion ? <ShieldAlert aria-hidden="true" /> : <Radar aria-hidden="true" />}</div>
+                  <div><small>{locale === 'en' ? '360° PERIMETER' : '360° 周界状态'}</small><strong>{intrusion ? (locale === 'en' ? 'Threat detected · Entry side' : '车门侧检测到异常') : (locale === 'en' ? '4 cameras · Full coverage' : '4路摄像头 · 全方位守护')}</strong></div>
+                  <div className={intrusion ? 'perimeter-orbit has-alert' : 'perimeter-orbit'} aria-hidden="true"><span /><i /><i /><i /><i /></div>
                 </div>
-                <div className="readonly-note">{locale === 'en' ? 'Camera & security status · View only' : '摄像头及安防状态 · 仅展示'}</div>
+                <div className="readonly-note">{locale === 'en' ? 'Four cameras recording continuously · View only' : '四路摄像头持续录像 · 仅展示'}</div>
                 <div className="security-grid">
                   <SecurityItem icon={DoorClosed} label={locale === 'en' ? 'Doors' : '车门'} state={locale === 'en' ? 'Secured' : '已锁定'} alert={false} />
                   <SecurityItem icon={ScanLine} label={locale === 'en' ? 'Motion' : '移动侦测'} state={intrusion ? (locale === 'en' ? 'Detected' : '已检测') : (locale === 'en' ? 'Active' : '已开启')} alert={intrusion} />
-                  <SecurityItem icon={Camera} label={locale === 'en' ? 'Recording' : '录像'} state={locale === 'en' ? 'Continuous' : '持续录像'} alert={false} />
+                  <SecurityItem icon={Camera} label={locale === 'en' ? 'Cameras' : '摄像头'} state={locale === 'en' ? '4 / 4 online' : '4 / 4 在线'} alert={false} />
                   <SecurityItem icon={Siren} label={locale === 'en' ? 'Siren' : '警报器'} state={intrusion ? (locale === 'en' ? 'Active' : '已响起') : (locale === 'en' ? 'Ready' : '待命')} alert={intrusion} />
                 </div>
                 <button className={intrusion ? 'alert-action dismiss-action' : 'alert-action'} onClick={() => setIntrusion(!intrusion)}>

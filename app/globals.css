@@ -275,6 +275,25 @@ svg { stroke-width: 1.8; }
 .activation-progress span { display: block; width: 100%; height: 100%; border-radius: inherit; background: linear-gradient(90deg,var(--teal),#72ddeb); transform-origin: left; animation: progress .9s ease both; }
 
 .systems-panel { display: flex; flex-direction: column; }
+.sentry-camera-wall { aspect-ratio: 3/2; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); grid-template-rows: repeat(2,minmax(0,1fr)); gap: 5px; margin: 10px 0 0; }
+.sentry-camera { position: relative; min-width: 0; overflow: hidden; border: 1px solid rgba(116,215,232,.16); border-radius: 9px; background: #061116; box-shadow: inset 0 0 20px rgba(0,0,0,.2); }
+.sentry-camera-image { position: absolute; width: 200%; max-width: none; height: 200%; object-fit: fill; filter: brightness(.67) saturate(.7) contrast(1.08); }
+.camera-front .sentry-camera-image { top: 0; left: 0; }
+.camera-entry .sentry-camera-image { top: 0; left: -100%; }
+.camera-rear .sentry-camera-image { top: -100%; left: 0; }
+.camera-camp .sentry-camera-image { top: -100%; left: -100%; }
+.sentry-camera .camera-overlay { background: linear-gradient(180deg,rgba(3,10,14,.46),transparent 37%,transparent 56%,rgba(3,10,14,.72)), repeating-linear-gradient(0deg,transparent 0 3px,rgba(100,220,235,.025) 3px 4px); }
+.sentry-camera-topline { position: absolute; z-index: 2; top: 5px; right: 6px; left: 6px; display: flex; align-items: center; justify-content: space-between; color: rgba(232,246,248,.8); font-size: 7px; font-weight: 650; letter-spacing: .03em; }
+.sentry-live { display: inline-flex; align-items: center; gap: 3px; color: #9aecbd; }
+.sentry-live svg { width: 7px; height: 7px; fill: currentColor; }
+.sentry-live.is-alert { color: #ff9ba2; }
+.sentry-camera-caption { position: absolute; z-index: 2; right: 6px; bottom: 5px; left: 6px; display: flex; align-items: center; gap: 4px; overflow: hidden; color: #edf7f8; font-size: 8px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.sentry-camera-caption svg { flex: 0 0 auto; width: 9px; height: 9px; }
+.sentry-scan { position: absolute; z-index: 1; top: -28%; left: 0; width: 100%; height: 35%; background: linear-gradient(180deg,transparent,rgba(91,220,234,.05),rgba(95,222,238,.16)); animation: scan 4.8s ease-in-out infinite; }
+.sentry-detection { position: absolute; z-index: 3; top: 25%; left: 53%; width: 28%; height: 43%; border: 1px solid #ff626c; box-shadow: 0 0 12px rgba(255,98,108,.34), inset 0 0 10px rgba(255,98,108,.08); animation: detect .65s ease both; }
+.sentry-detection span { position: absolute; bottom: 100%; left: -1px; padding: 2px 3px; background: #e84c57; color: #fff; font-size: 6px; font-weight: 700; white-space: nowrap; }
+.sentry-camera.is-alert { border-color: rgba(255,98,108,.8); box-shadow: 0 0 18px rgba(255,98,108,.22), inset 0 0 22px rgba(255,70,82,.08); }
+.sentry-camera.is-alert .sentry-camera-image { filter: brightness(.59) saturate(.62) contrast(1.12); }
 .camera-feed { position: relative; aspect-ratio: 16/10; margin-top: 13px; overflow: hidden; border: 1px solid rgba(116,215,232,.18); border-radius: 14px; background: #061116; }
 .camera-feed img { width: 100%; height: 100%; object-fit: cover; filter: brightness(.7) saturate(.7) contrast(1.08); animation: camera-drift 12s ease-in-out infinite alternate; }
 .camera-overlay { position: absolute; inset: 0; background: linear-gradient(180deg,rgba(3,10,14,.36),transparent 31%,transparent 65%,rgba(3,10,14,.62)), repeating-linear-gradient(0deg,transparent 0 3px,rgba(100,220,235,.025) 3px 4px); }
@@ -298,6 +317,15 @@ svg { stroke-width: 1.8; }
 .security-status > div:last-child { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
 .security-status small { color: #78d2a8; font-size: 9px; letter-spacing: .1em; }
 .security-status strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.perimeter-orbit { position: relative; flex: 0 0 auto; width: 33px; height: 33px; margin-left: auto; border: 1px solid rgba(100,226,182,.3); border-radius: 50%; background: radial-gradient(circle,rgba(86,222,171,.19) 0 2px,transparent 3px), conic-gradient(from 15deg,rgba(86,222,171,.26),transparent 26%,transparent 100%); animation: orbit 7s linear infinite; }
+.perimeter-orbit::before { content: ""; position: absolute; inset: 7px; border: 1px solid rgba(100,226,182,.2); border-radius: inherit; }
+.perimeter-orbit span { position: absolute; inset: 50% auto auto 50%; width: 8px; height: 4px; border: 1px solid rgba(170,244,217,.8); border-radius: 2px; transform: translate(-50%,-50%); }
+.perimeter-orbit i { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: #62dfa9; box-shadow: 0 0 8px rgba(98,223,169,.8); }
+.perimeter-orbit i:nth-of-type(1) { top: 2px; left: 50%; transform: translateX(-50%); }
+.perimeter-orbit i:nth-of-type(2) { top: 50%; right: 2px; transform: translateY(-50%); }
+.perimeter-orbit i:nth-of-type(3) { bottom: 2px; left: 50%; transform: translateX(-50%); }
+.perimeter-orbit i:nth-of-type(4) { top: 50%; left: 2px; transform: translateY(-50%); }
+.perimeter-orbit.has-alert i:nth-of-type(2) { background: #ff626c; box-shadow: 0 0 10px rgba(255,98,108,.95); animation: danger-pulse .8s ease-in-out infinite alternate; }
 .security-alert { border-color: rgba(255,98,108,.34); background: rgba(255,98,108,.07); }
 .security-alert .security-emblem { color: #ff959c; background: rgba(255,98,108,.13); }
 .security-alert small { color: #ff9ca3; }
@@ -542,6 +570,7 @@ svg { stroke-width: 1.8; }
 @keyframes camera-drift { to { transform: scale(1.045) translateX(-.8%); } }
 @keyframes scan { from { transform: translateY(-30%); opacity: 0; } 20% { opacity: 1; } 70% { opacity: .8; } to { transform: translateY(360%); opacity: 0; } }
 @keyframes detect { from { transform: scale(.82); opacity: 0; } }
+@keyframes danger-pulse { from { transform: translateY(-50%) scale(.75); opacity: .65; } to { transform: translateY(-50%) scale(1.25); opacity: 1; } }
 @keyframes wind { 50% { transform: rotate(8deg) scale(1.08); } }
 @keyframes alarm-edge { 50% { box-shadow: inset 0 0 95px rgba(255,70,81,.25); } }
 @keyframes load-pop { from { opacity: 0; transform: translateY(8px) scale(.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
