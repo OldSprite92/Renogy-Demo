@@ -276,7 +276,10 @@ svg { stroke-width: 1.8; }
 
 .systems-panel { display: flex; flex-direction: column; }
 .sentry-camera-wall { aspect-ratio: 3/2; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); grid-template-rows: repeat(2,minmax(0,1fr)); gap: 5px; margin: 10px 0 0; }
-.sentry-camera { position: relative; min-width: 0; overflow: hidden; border: 1px solid rgba(116,215,232,.16); border-radius: 9px; background: #061116; box-shadow: inset 0 0 20px rgba(0,0,0,.2); }
+.sentry-camera { position: relative; min-width: 0; padding: 0; overflow: hidden; border: 1px solid rgba(116,215,232,.16); border-radius: 9px; background: #061116; color: var(--text); text-align: left; box-shadow: inset 0 0 20px rgba(0,0,0,.2); cursor: pointer; transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; touch-action: manipulation; }
+.sentry-camera:hover { border-color: rgba(116,215,232,.42); box-shadow: 0 0 18px rgba(36,173,211,.14), inset 0 0 20px rgba(0,0,0,.2); transform: translateY(-1px); }
+.sentry-camera:active { transform: scale(.985); }
+.sentry-camera:focus-visible { outline: 2px solid #78ddeb; outline-offset: 2px; }
 .sentry-camera-image { position: absolute; width: 200%; max-width: none; height: 200%; object-fit: fill; filter: brightness(.67) saturate(.7) contrast(1.08); }
 .camera-front .sentry-camera-image { top: 0; left: 0; }
 .camera-entry .sentry-camera-image { top: 0; left: -100%; }
@@ -287,8 +290,10 @@ svg { stroke-width: 1.8; }
 .sentry-live { display: inline-flex; align-items: center; gap: 3px; color: #9aecbd; }
 .sentry-live svg { width: 7px; height: 7px; fill: currentColor; }
 .sentry-live.is-alert { color: #ff9ba2; }
-.sentry-camera-caption { position: absolute; z-index: 2; right: 6px; bottom: 5px; left: 6px; display: flex; align-items: center; gap: 4px; overflow: hidden; color: #edf7f8; font-size: 8px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.sentry-camera-caption { position: absolute; z-index: 2; right: 6px; bottom: 5px; left: 6px; display: flex; align-items: center; gap: 4px; padding-right: 22px; overflow: hidden; color: #edf7f8; font-size: 8px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .sentry-camera-caption svg { flex: 0 0 auto; width: 9px; height: 9px; }
+.sentry-expand-hint { position: absolute; z-index: 4; right: 5px; bottom: 4px; width: 20px; height: 20px; display: grid; place-items: center; border: 1px solid rgba(142,228,240,.24); border-radius: 6px; background: rgba(3,13,18,.74); color: #a9edf5; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+.sentry-expand-hint svg { width: 10px; height: 10px; }
 .sentry-scan { position: absolute; z-index: 1; top: -28%; left: 0; width: 100%; height: 35%; background: linear-gradient(180deg,transparent,rgba(91,220,234,.05),rgba(95,222,238,.16)); animation: scan 4.8s ease-in-out infinite; }
 .sentry-detection { position: absolute; z-index: 3; top: 25%; left: 53%; width: 28%; height: 43%; border: 1px solid #ff626c; box-shadow: 0 0 12px rgba(255,98,108,.34), inset 0 0 10px rgba(255,98,108,.08); animation: detect .65s ease both; }
 .sentry-detection span { position: absolute; bottom: 100%; left: -1px; padding: 2px 3px; background: #e84c57; color: #fff; font-size: 6px; font-weight: 700; white-space: nowrap; }
@@ -341,6 +346,27 @@ svg { stroke-width: 1.8; }
 .alert-action svg { width: 14px; }
 .dismiss-action { border-color: rgba(255,98,108,.28); background: rgba(255,98,108,.09); color: #ffb0b5; }
 .dismiss-action:hover { background: rgba(255,98,108,.15); border-color: rgba(255,98,108,.45); }
+
+.camera-dialog[data-slot="dialog-content"] { width: min(980px,calc(100vw - 32px)); max-width: 980px; max-height: 92svh; gap: 13px; overflow-y: auto; padding: 18px; border: 1px solid rgba(106,213,230,.28); border-radius: 22px; background: radial-gradient(circle at 8% 0,rgba(36,173,211,.13),transparent 34%), #061218; color: var(--text); box-shadow: 0 30px 100px rgba(0,0,0,.68); }
+.camera-dialog-header { display: flex; flex-direction: row; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.camera-dialog-header > div { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.camera-dialog [data-slot="dialog-title"] { color: var(--text); font-size: 24px; font-weight: 650; line-height: 1.1; }
+.camera-dialog [data-slot="dialog-description"] { margin: 0; color: #aebfc4; font-size: 14px; line-height: 1.45; }
+.camera-dialog-feed { position: relative; aspect-ratio: 3/2; overflow: hidden; border: 1px solid rgba(116,215,232,.26); border-radius: 17px; background: #030b0f; box-shadow: inset 0 0 34px rgba(0,0,0,.28); }
+.camera-dialog-feed.is-alert { border-color: rgba(255,98,108,.8); box-shadow: 0 0 30px rgba(255,98,108,.18), inset 0 0 34px rgba(0,0,0,.28); }
+.camera-dialog-topline { position: absolute; z-index: 4; top: 14px; right: 15px; left: 15px; display: flex; align-items: center; justify-content: space-between; color: rgba(238,248,249,.9); font-size: 13px; font-variant-numeric: tabular-nums; }
+.camera-dialog-feed .live-pill { padding: 6px 9px; font-size: 12px; font-weight: 700; }
+.camera-dialog-feed .live-pill svg { width: 11px; height: 11px; }
+.camera-dialog-feed .sentry-scan { height: 24%; animation-duration: 5.5s; }
+.sentry-detection.is-enlarged { top: 28%; left: 56%; width: 22%; height: 38%; border-width: 2px; }
+.sentry-detection.is-enlarged span { padding: 5px 7px; font-size: 11px; }
+.camera-dialog-caption { position: absolute; z-index: 4; right: 16px; bottom: 14px; left: 16px; display: grid; grid-template-columns: 22px auto 1fr; align-items: center; gap: 8px; color: #f2fafb; }
+.camera-dialog-caption svg { width: 20px; }
+.camera-dialog-caption strong { font-size: 17px; }
+.camera-dialog-caption span { color: #aabcc1; font-size: 13px; }
+.camera-dialog-status { min-height: 44px; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+.camera-dialog-status span { display: flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 10px; border: 1px solid rgba(255,255,255,.06); border-radius: 10px; background: rgba(255,255,255,.025); color: #bfd0d4; font-size: 12px; }
+.camera-dialog-status svg { width: 15px; color: #6fe0af; }
 
 .climate-card { position: relative; min-height: 130px; margin-top: 14px; padding: 15px; overflow: hidden; border: 1px solid rgba(79,199,219,.14); border-radius: 15px; background: radial-gradient(circle at 82% 45%,rgba(36,173,211,.15),transparent 28%), linear-gradient(145deg,rgba(28,67,79,.28),rgba(5,19,25,.3)); }
 .climate-card > div:first-child { display: flex; flex-direction: column; }
@@ -655,6 +681,15 @@ svg { stroke-width: 1.8; }
   .device-control-fields { grid-template-columns: 1fr; }
   .sensor-metric-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .efficiency-dialog[data-slot="dialog-content"] { max-height: 90svh; padding: 16px; }
+  .camera-dialog[data-slot="dialog-content"] { width: calc(100vw - 20px); max-height: 92svh; padding: 13px; border-radius: 17px; }
+  .camera-dialog [data-slot="dialog-title"] { font-size: 20px; }
+  .camera-dialog-feed { border-radius: 12px; }
+  .camera-dialog-topline { top: 9px; right: 10px; left: 10px; font-size: 10px; }
+  .camera-dialog-caption { right: 10px; bottom: 9px; left: 10px; grid-template-columns: 18px auto; }
+  .camera-dialog-caption svg { width: 16px; }
+  .camera-dialog-caption strong { font-size: 14px; }
+  .camera-dialog-caption span { display: none; }
+  .camera-dialog-status { grid-template-columns: 1fr; gap: 5px; }
   .efficiency-overview { grid-template-columns: 100px minmax(0,1fr); gap: 12px; padding: 11px; }
   .efficiency-score-orbit { width: 92px; height: 92px; border-width: 6px; }
   .efficiency-score-orbit strong { font-size: 25px; }

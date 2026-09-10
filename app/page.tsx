@@ -2,7 +2,7 @@
 
 import {
   Armchair, ArrowDown, ArrowLeft, ArrowUp, Battery, BatteryCharging, Blinds, Camera, Check, ChevronRight, CircleDot,
-  CookingPot, DoorClosed, Droplets, Film, Gauge, Hand, Languages, Lamp, Leaf, Lock, MapPin, Microwave, Moon,
+  CookingPot, DoorClosed, Droplets, Film, Gauge, Hand, Languages, Lamp, Leaf, Lock, MapPin, Maximize2, Microwave, Moon,
   Power, Radar, Radio, RotateCcw, ScanLine, ShieldAlert, ShieldCheck, Siren, Snowflake,
   Sparkles, Sun, TentTree, Thermometer, Tv, Volume2, Waves, Wifi, Wind, X, Zap,
   type LucideIcon,
@@ -364,6 +364,7 @@ export default function Home() {
   const [loadSheetOpen, setLoadSheetOpen] = useState(false);
   const [loadOverrides, setLoadOverrides] = useState<LoadOverrides>({});
   const [selectedLoadKey, setSelectedLoadKey] = useState<LoadKey | null>(null);
+  const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
   const [efficiencyOpen, setEfficiencyOpen] = useState(false);
   const [efficiencyScene, setEfficiencyScene] = useState<SceneKey>('camp');
   const [deviceControls, setDeviceControls] = useState<DeviceControls>(() => createSceneControls('camp'));
@@ -449,6 +450,7 @@ export default function Home() {
   const onlineSensorCount = sensorDevices.filter(load => getLoadState(load).on).length;
   const temperatureReading = pick(temperatureSensor.value).replace('°C', '');
   const selectedLoad = selectedLoadKey ? visualLoads.find(load => load.key === selectedLoadKey) ?? null : null;
+  const selectedCamera = selectedCameraId ? sentryCameras.find(camera => camera.id === selectedCameraId) ?? null : null;
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
   const sceneStatus = intrusion
@@ -462,6 +464,7 @@ export default function Home() {
     setDeviceControls(createSceneControls(key));
     setLoadSheetOpen(false);
     setSelectedLoadKey(null);
+    setSelectedCameraId(null);
     setIntrusion(false);
     setPendingScene(key);
     timer.current = setTimeout(() => { setActiveScene(key); setPendingScene(null); }, 980);
@@ -469,7 +472,7 @@ export default function Home() {
 
   function resetDemo() {
     if (timer.current) clearTimeout(timer.current);
-    setPendingScene(null); setIntrusion(false); setActiveScene('camp'); setLoadOverrides({}); setDeviceControls(createSceneControls('camp')); setSelectedLoadKey(null); setLoadSheetOpen(false); setEfficiencyOpen(false); setEfficiencyScene('camp');
+    setPendingScene(null); setIntrusion(false); setActiveScene('camp'); setLoadOverrides({}); setDeviceControls(createSceneControls('camp')); setSelectedLoadKey(null); setSelectedCameraId(null); setLoadSheetOpen(false); setEfficiencyOpen(false); setEfficiencyScene('camp');
   }
 
   function toggleLoad(load: VisualLoad) {
@@ -652,13 +655,14 @@ export default function Home() {
                   {sentryCameras.map(camera => {
                     const cameraAlert = intrusion && camera.detectsIntrusion;
                     return (
-                      <div className={`sentry-camera camera-${camera.position} ${cameraAlert ? 'is-alert' : ''}`} key={camera.id}>
-                        <Image className="sentry-camera-image" src="/assets/sentry-cameras.png" width={1024} height={683} sizes="150px" alt={`${locale === 'en' ? camera.label.en : camera.label.zh} ${locale === 'en' ? 'live camera view' : '实时摄像头画面'}`} />
+                      <button className={`sentry-camera camera-${camera.position} ${cameraAlert ? 'is-alert' : ''}`} type="button" key={camera.id} onClick={() => setSelectedCameraId(camera.id)} aria-label={`${locale === 'en' ? camera.label.en : camera.label.zh} · ${locale === 'en' ? 'Open enlarged live camera view' : '打开实时监控大画面'}`}>
+                        <Image className="sentry-camera-image" src="/assets/sentry-cameras.png" width={1024} height={682} sizes="150px" alt="" />
                         <div className="camera-overlay" aria-hidden="true" />
                         <div className="sentry-camera-topline"><span className={cameraAlert ? 'sentry-live is-alert' : 'sentry-live'}><Radio aria-hidden="true" /> {cameraAlert ? (locale === 'en' ? 'ALERT' : '告警') : 'LIVE'}</span><span>CAM {camera.id}</span></div>
                         {cameraAlert ? <div className="sentry-detection"><span>{locale === 'en' ? 'PERSON · 98%' : '人员 · 98%'}</span></div> : <div className="sentry-scan" aria-hidden="true" />}
                         <div className="sentry-camera-caption"><Camera aria-hidden="true" /> {locale === 'en' ? camera.label.en : camera.label.zh}</div>
-                      </div>
+                        <span className="sentry-expand-hint" aria-hidden="true"><Maximize2 /></span>
+                      </button>
                     );
                   })}
                 </figure>
@@ -667,7 +671,7 @@ export default function Home() {
                   <div><small>{locale === 'en' ? '360° PERIMETER' : '360° 周界状态'}</small><strong>{intrusion ? (locale === 'en' ? 'Threat detected · Entry side' : '车门侧检测到异常') : (locale === 'en' ? '4 cameras · Full coverage' : '4路摄像头 · 全方位守护')}</strong></div>
                   <div className={intrusion ? 'perimeter-orbit has-alert' : 'perimeter-orbit'} aria-hidden="true"><span /><i /><i /><i /><i /></div>
                 </div>
-                <div className="readonly-note">{locale === 'en' ? 'Four cameras recording continuously · View only' : '四路摄像头持续录像 · 仅展示'}</div>
+                <div className="readonly-note">{locale === 'en' ? 'Tap any camera to enlarge · Continuous recording' : '点击任一画面放大查看 · 持续录像'}</div>
                 <div className="security-grid">
                   <SecurityItem icon={DoorClosed} label={locale === 'en' ? 'Doors' : '车门'} state={locale === 'en' ? 'Secured' : '已锁定'} alert={false} />
                   <SecurityItem icon={ScanLine} label={locale === 'en' ? 'Motion' : '移动侦测'} state={intrusion ? (locale === 'en' ? 'Detected' : '已检测') : (locale === 'en' ? 'Active' : '已开启')} alert={intrusion} />
@@ -801,6 +805,26 @@ export default function Home() {
           <section className="efficiency-opportunity"><Sparkles aria-hidden="true" /><div><span>{locale === 'en' ? 'NEXT OPPORTUNITY' : '下一步建议'}</span><p>{pick(selectedEnergyInsight.opportunity)}</p></div></section>
         </div>
         <p className="efficiency-model-note">{locale === 'en' ? 'Concept score based on the current scene configuration and simulated demo data.' : '概念评分依据当前场景配置与模拟演示数据计算。'}</p>
+      </DialogContent>
+    </Dialog>
+    <Dialog open={Boolean(selectedCamera)} onOpenChange={open => { if (!open) setSelectedCameraId(null); }}>
+      <DialogContent className="camera-dialog" showCloseButton={false}>
+        {selectedCamera && (
+          <>
+            <DialogHeader className="camera-dialog-header">
+              <div><span className="eyebrow">360° SENTINEL · CAM {selectedCamera.id}</span><DialogTitle>{locale === 'en' ? selectedCamera.label.en : selectedCamera.label.zh}</DialogTitle><DialogDescription>{locale === 'en' ? 'Live view from a camera mounted directly on the RV body.' : '来自安装在房车车身上的摄像头实时画面。'}</DialogDescription></div>
+              <DialogClose className="efficiency-close" aria-label={locale === 'en' ? 'Close camera view' : '关闭摄像头画面'}><X aria-hidden="true" /></DialogClose>
+            </DialogHeader>
+            <div className={`camera-dialog-feed camera-${selectedCamera.position} ${intrusion && selectedCamera.detectsIntrusion ? 'is-alert' : ''}`}>
+              <Image className="sentry-camera-image" src="/assets/sentry-cameras.png" width={1024} height={682} sizes="(max-width: 760px) 92vw, 900px" alt={`${locale === 'en' ? selectedCamera.label.en : selectedCamera.label.zh} ${locale === 'en' ? 'enlarged live camera view' : '实时监控放大画面'}`} />
+              <div className="camera-overlay" aria-hidden="true" />
+              <div className="camera-dialog-topline"><span className={intrusion && selectedCamera.detectsIntrusion ? 'live-pill alert-pill' : 'live-pill'}><Radio aria-hidden="true" /> {intrusion && selectedCamera.detectsIntrusion ? (locale === 'en' ? 'ALERT' : '告警') : 'LIVE'}</span><span>CAM {selectedCamera.id} · {current.time}</span></div>
+              {intrusion && selectedCamera.detectsIntrusion ? <div className="sentry-detection is-enlarged"><span>{locale === 'en' ? 'PERSON DETECTED · 98%' : '检测到人员 · 98%'}</span></div> : <div className="sentry-scan" aria-hidden="true" />}
+              <div className="camera-dialog-caption"><Camera aria-hidden="true" /><strong>{locale === 'en' ? selectedCamera.label.en : selectedCamera.label.zh}</strong><span>{locale === 'en' ? 'Vehicle-mounted camera' : '车载摄像头'}</span></div>
+            </div>
+            <div className="camera-dialog-status"><span><Radio aria-hidden="true" />{locale === 'en' ? 'Live stream' : '实时画面'}</span><span><Camera aria-hidden="true" />{locale === 'en' ? '4 / 4 cameras online' : '4 / 4 摄像头在线'}</span><span><ShieldCheck aria-hidden="true" />{locale === 'en' ? 'Continuous recording' : '持续录像'}</span></div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
     </>
