@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  Armchair, ArrowDown, ArrowLeft, ArrowUp, BatteryCharging, Blinds, Camera, Check, ChevronRight, CircleDot,
+  Armchair, ArrowDown, ArrowLeft, ArrowUp, Battery, BatteryCharging, Blinds, Camera, Check, ChevronRight, CircleDot,
   CookingPot, DoorClosed, Droplets, Film, Gauge, Hand, Languages, Lamp, Leaf, Lock, MapPin, Microwave, Moon,
   Power, Radio, RotateCcw, ScanLine, ShieldAlert, ShieldCheck, Siren, Snowflake,
   Sparkles, Sun, TentTree, Thermometer, Tv, Volume2, Waves, Wifi, Wind, X, Zap,
@@ -365,11 +365,6 @@ export default function Home() {
   const selectedEnergyInsight = energyInsights[efficiencyScene];
   const preview = scenes[pendingScene ?? activeScene];
   const PreviewIcon = preview.sceneIcon;
-  const batteryIsCharging = !current.batteryFlow.trim().startsWith('-');
-  const batteryFlowPower = current.batteryFlow.replace(/^[+-]/, '');
-  const batteryFlowLabel = batteryIsCharging
-    ? (locale === 'en' ? 'Charging' : '充电中')
-    : (locale === 'en' ? 'Discharging' : '放电中');
   const pick = (value: Localized) => value[locale];
   const getLoadState = (load: VisualLoad, scene: SceneKey = activeScene): LoadState => {
     const override = loadOverrides[scene]?.[load.key];
@@ -422,6 +417,24 @@ export default function Home() {
   const inverterOn = getLoadByKey('inverter').on;
   const microwaveOn = getLoadByKey('microwave').on;
   const inductionOn = getLoadByKey('induction').on;
+  const microwavePower = microwaveOn ? Number(deviceControls.microwave?.power ?? 800) : 0;
+  const inductionPower = inductionOn ? Number(deviceControls.induction?.power ?? 600) : 0;
+  const kitchenLoadWatts = microwavePower + inductionPower;
+  const rvLoadWatts = Number.parseFloat(current.load) + kitchenLoadWatts;
+  const rvLoadValue = `${Math.round(rvLoadWatts)} W`;
+  const batteryFlowKw = Math.round((Number.parseFloat(current.batteryFlow) - kitchenLoadWatts / 1000) * 100) / 100;
+  const batteryIsCharging = batteryFlowKw >= 0;
+  const batteryFlowPower = `${Math.abs(batteryFlowKw).toFixed(2)} kW`;
+  const batteryFlowValue = `${batteryIsCharging ? '+' : '-'}${batteryFlowPower}`;
+  const batteryFlowLabel = batteryIsCharging
+    ? (locale === 'en' ? 'Charging' : '充电中')
+    : (locale === 'en' ? 'Discharging' : '放电中');
+  const estimatedRuntime = kitchenLoadWatts === 0 || batteryIsCharging
+    ? current.runtime
+    : `${Math.max(1, Math.floor(9.8 / Math.abs(batteryFlowKw)))} h`;
+  const forecastCurvePath = batteryIsCharging
+    ? 'M2 49 C28 45 31 32 55 35 S84 16 108 22 S145 8 178 13'
+    : 'M2 11 C28 14 38 22 58 20 S91 33 112 31 S149 46 178 49';
   const temperatureSensor = getLoadByKey('temperature-sensor');
   const airSensor = getLoadByKey('air-sensor');
   const noiseSensor = getLoadByKey('noise-sensor');
@@ -527,25 +540,25 @@ export default function Home() {
             </div>
             <div className={`battery-summary ${batteryIsCharging ? 'is-charging' : 'is-discharging'}`}>
             <div className="battery-orbit" aria-label={locale === 'en' ? 'Battery state of charge 82 percent' : '电池电量82%'}>
-              <div className="battery-ring"><div><BatteryCharging aria-hidden="true" /><strong>82<span>%</span></strong><small>{locale === 'en' ? 'Battery' : '电池电量'}</small></div></div>
+              <div className="battery-ring"><div>{batteryIsCharging ? <BatteryCharging aria-hidden="true" /> : <Battery aria-hidden="true" />}<strong>82<span>%</span></strong><small>{locale === 'en' ? 'Battery' : '电池电量'}</small></div></div>
               <span className="orbit-dot" aria-hidden="true" />
             </div>
-              <span className="battery-flow-status" role="status"><span className="battery-flow-direction">{batteryIsCharging ? <ArrowDown aria-hidden="true" /> : <ArrowUp aria-hidden="true" />}{batteryFlowLabel}</span><strong>{batteryFlowPower}</strong></span>
+              <span className="battery-flow-status" role="status" aria-atomic="true" aria-label={locale === 'en' ? `RV load ${rvLoadValue}; battery ${batteryFlowLabel.toLowerCase()} at ${batteryFlowPower}` : `房车负载${rvLoadValue}；电池${batteryFlowLabel}${batteryFlowPower}`}><span className="battery-flow-direction">{batteryIsCharging ? <ArrowDown aria-hidden="true" /> : <ArrowUp aria-hidden="true" />}{batteryFlowLabel}</span><strong>{batteryFlowPower}</strong></span>
             </div>
             <div className="energy-metrics">
               <Metric icon={Sun} label={locale === 'en' ? 'Solar' : '太阳能'} value={current.solar} tone="cyan" />
-              <Metric icon={BatteryCharging} label={locale === 'en' ? (batteryIsCharging ? 'Battery charging' : 'Battery discharge') : (batteryIsCharging ? '电池充电' : '电池放电')} value={current.batteryFlow} tone={batteryIsCharging ? 'green' : 'amber'} />
-              <Metric icon={Power} label={locale === 'en' ? 'RV load' : '房车负载'} value={current.load} tone="violet" />
+              <Metric icon={batteryIsCharging ? BatteryCharging : Battery} label={locale === 'en' ? (batteryIsCharging ? 'Battery charging' : 'Battery discharge') : (batteryIsCharging ? '电池充电' : '电池放电')} value={batteryFlowValue} tone={batteryIsCharging ? 'green' : 'amber'} />
+              <Metric icon={Power} label={locale === 'en' ? 'RV load' : '房车负载'} value={rvLoadValue} tone="violet" />
             </div>
-            <div className="flow-rail" aria-hidden="true"><span className="flow-line" /><span className="flow-pulse pulse-one" /><span className="flow-pulse pulse-two" /></div>
+            <div className={`flow-rail ${batteryIsCharging ? 'is-charging' : 'is-discharging'}`} aria-hidden="true"><span className="flow-line" /><span className="flow-pulse pulse-one" /><span className="flow-pulse pulse-two" /></div>
             <div className="forecast-card">
-              <div className="forecast-copy"><span>{locale === 'en' ? 'Estimated autonomy' : '预计续航'}</span><strong>{current.runtime}</strong></div>
+              <div className="forecast-copy"><span>{locale === 'en' ? 'Estimated autonomy' : '预计续航'}</span><strong>{estimatedRuntime}</strong></div>
               <svg viewBox="0 0 180 58" role="img" aria-label={locale === 'en' ? 'Projected battery curve' : '预计电量曲线'}>
-                <defs><linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#24add3" stopOpacity=".38" /><stop offset="1" stopColor="#24add3" stopOpacity="0" /></linearGradient></defs>
-                <path d="M2 49 C28 45 31 32 55 35 S84 16 108 22 S145 8 178 13 L178 58 L2 58 Z" fill="url(#chartFill)" />
-                <path d="M2 49 C28 45 31 32 55 35 S84 16 108 22 S145 8 178 13" fill="none" stroke="#46c6df" strokeWidth="2" strokeLinecap="round" />
+                <defs><linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={batteryIsCharging ? '#24add3' : '#f0b766'} stopOpacity=".38" /><stop offset="1" stopColor={batteryIsCharging ? '#24add3' : '#f0b766'} stopOpacity="0" /></linearGradient></defs>
+                <path d={`${forecastCurvePath} L178 58 L2 58 Z`} fill="url(#chartFill)" />
+                <path d={forecastCurvePath} fill="none" stroke={batteryIsCharging ? '#46c6df' : '#f0b766'} strokeWidth="2" strokeLinecap="round" />
               </svg>
-              <div className="forecast-foot"><Leaf aria-hidden="true" /> {locale === 'en' ? 'Optimized for this stay' : '已为本次驻留优化'}</div>
+              <div className={`forecast-foot ${kitchenLoadWatts > 0 ? 'is-high-load' : ''}`}>{kitchenLoadWatts > 0 ? <CookingPot aria-hidden="true" /> : <Leaf aria-hidden="true" />} {kitchenLoadWatts > 0 ? (locale === 'en' ? `Kitchen load +${kitchenLoadWatts} W included` : `已计入厨房负载 +${kitchenLoadWatts} W`) : (locale === 'en' ? 'Optimized for this stay' : '已为本次驻留优化')}</div>
             </div>
           </aside>
 
