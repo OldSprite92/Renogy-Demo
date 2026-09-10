@@ -2,7 +2,7 @@
 
 import {
   Armchair, ArrowDown, ArrowLeft, ArrowUp, BatteryCharging, Blinds, Camera, Check, ChevronRight, CircleDot,
-  DoorClosed, Droplets, Film, Gauge, Hand, Languages, Lamp, Leaf, Lock, MapPin, Moon,
+  CookingPot, DoorClosed, Droplets, Film, Gauge, Hand, Languages, Lamp, Leaf, Lock, MapPin, Microwave, Moon,
   Power, Radio, RotateCcw, ScanLine, ShieldAlert, ShieldCheck, Siren, Snowflake,
   Sparkles, Sun, TentTree, Thermometer, Tv, Volume2, Waves, Wifi, Wind, X, Zap,
   type LucideIcon,
@@ -15,7 +15,7 @@ import { Switch } from '@/components/ui/switch';
 type Locale = 'en' | 'zh';
 type SceneKey = 'camp' | 'away' | 'movie' | 'sleep';
 type IconName = 'lamp' | 'climate' | 'tv' | 'audio' | 'humidifier' | 'inverter' | 'lock' | 'blinds';
-type LoadKey = 'climate' | 'lights' | 'shades' | 'tv' | 'humidifier' | 'ambient' | 'audio' | 'inverter' | 'lock' | 'temperature-sensor' | 'air-sensor' | 'noise-sensor';
+type LoadKey = 'climate' | 'lights' | 'shades' | 'tv' | 'microwave' | 'induction' | 'humidifier' | 'ambient' | 'audio' | 'inverter' | 'lock' | 'temperature-sensor' | 'air-sensor' | 'noise-sensor';
 type Localized = { en: string; zh: string };
 type DeviceState = { icon: IconName; name: Localized; value: Localized; active: boolean };
 type LoadState = { on: boolean; value: Localized };
@@ -47,7 +47,7 @@ const scenes: Record<SceneKey, Scene> = {
     steps: [
       { en: 'Auto-level complete', zh: '自动调平完成' },
       { en: 'Awning deployed', zh: '遮阳棚已展开' },
-      { en: 'Climate set to 23°C', zh: '空调设定为23°C' },
+      { en: 'Kitchen appliances ready', zh: '厨房电器已就绪' },
     ],
     devices: [
       { icon: 'lamp', name: { en: 'Welcome lights', zh: '迎宾灯' }, value: { en: 'Warm · 65%', zh: '暖光 · 65%' }, active: true },
@@ -65,7 +65,7 @@ const scenes: Record<SceneKey, Scene> = {
     runtime: '72 h+', temperature: '27°', inverter: { en: 'Eco', zh: '节能模式' },
     security: true, sceneIcon: ShieldCheck,
     steps: [
-      { en: 'Climate and cabin loads off', zh: '空调及舱内负载已关闭' },
+      { en: 'Climate and cooking loads off', zh: '空调及烹饪负载已关闭' },
       { en: 'Doors and windows secured', zh: '门窗已锁定' },
       { en: 'Cameras and solar priority on', zh: '摄像头与太阳能优先已开启' },
     ],
@@ -87,7 +87,7 @@ const scenes: Record<SceneKey, Scene> = {
     steps: [
       { en: 'Smart shades closed', zh: '智能遮阳帘已关闭' },
       { en: 'Cinema audio enabled', zh: '影院音响已开启' },
-      { en: 'Ambient lights set to 30%', zh: '氛围灯已调至30%' },
+      { en: 'Popcorn preset ready', zh: '爆米花预设已就绪' },
     ],
     devices: [
       { icon: 'tv', name: { en: 'Entertainment', zh: '娱乐系统' }, value: { en: 'Cinema · On', zh: '影院 · 已开启' }, active: true },
@@ -105,7 +105,7 @@ const scenes: Record<SceneKey, Scene> = {
     runtime: '41 h', temperature: '24°', inverter: { en: 'Silent', zh: '静音模式' },
     security: true, sceneIcon: Moon,
     steps: [
-      { en: 'Main lights turned off', zh: '主灯已关闭' },
+      { en: 'Lights and cooking loads off', zh: '灯光及烹饪负载已关闭' },
       { en: 'Silent power enabled', zh: '静音供电已开启' },
       { en: 'Night Guard armed', zh: '夜间守护已布防' },
     ],
@@ -133,8 +133,8 @@ const energyInsights: Record<SceneKey, {
     score: 91, grade: { en: 'Excellent', zh: '优秀' },
     summary: { en: 'Comfort and charging are well balanced', zh: '舒适体验与充电效率保持均衡' },
     explanation: { en: 'Strong solar input covers the active cabin loads and still leaves surplus energy for the battery.', zh: '太阳能输入能够覆盖当前舱内负载，并保留余量为电池充电。' },
-    opportunity: { en: 'Turning off idle entertainment devices could raise the score by 3 points.', zh: '关闭闲置影音设备，预计还可提升3分。' },
-    actions: [{ en: 'Solar surplus is charging the battery', zh: '太阳能余量正在为电池充电' }, { en: 'Climate holds 23°C in Auto', zh: '空调以自动模式维持23°C' }, { en: 'Inverter uses Balanced mode', zh: '逆变器运行于均衡模式' }],
+    opportunity: { en: 'Run high-power cooking while solar input is strongest to protect battery range.', zh: '建议在太阳能输入最强时使用高功率烹饪设备，以保护电池续航。' },
+    actions: [{ en: 'Solar surplus is charging the battery', zh: '太阳能余量正在为电池充电' }, { en: 'Kitchen appliances await manual start', zh: '厨房电器等待手动启动' }, { en: 'Inverter uses Balanced mode', zh: '逆变器运行于均衡模式' }],
     factors: [{ name: { en: 'Load scheduling', zh: '负载调度' }, weight: 35, score: 92 }, { name: { en: 'Standby control', zh: '待机管理' }, weight: 25, score: 88 }, { name: { en: 'Power conversion', zh: '电能转换' }, weight: 25, score: 94 }, { name: { en: 'Renewable use', zh: '清洁能源利用' }, weight: 15, score: 88 }],
   },
   away: {
@@ -142,7 +142,7 @@ const energyInsights: Record<SceneKey, {
     summary: { en: 'Only protection and essential systems remain active', zh: '仅保留安防和必要系统运行' },
     explanation: { en: 'Comfort loads are suspended while solar generation is prioritized for battery recovery.', zh: '舒适类负载已暂停，太阳能优先用于补充电池续航。' },
     opportunity: { en: 'This scene is already near its practical efficiency limit.', zh: '该场景已接近当前配置下的最佳能效。' },
-    actions: [{ en: 'Cabin comfort loads are off', zh: '舱内舒适类负载已关闭' }, { en: 'Solar charging has priority', zh: '太阳能充电处于优先级' }, { en: 'Inverter is in Eco mode', zh: '逆变器已进入节能模式' }],
+    actions: [{ en: 'Cooking appliances are safely isolated', zh: '烹饪设备已安全断电' }, { en: 'Solar charging has priority', zh: '太阳能充电处于优先级' }, { en: 'Inverter is in Eco mode', zh: '逆变器已进入节能模式' }],
     factors: [{ name: { en: 'Load scheduling', zh: '负载调度' }, weight: 35, score: 99 }, { name: { en: 'Standby control', zh: '待机管理' }, weight: 25, score: 98 }, { name: { en: 'Power conversion', zh: '电能转换' }, weight: 25, score: 94 }, { name: { en: 'Renewable use', zh: '清洁能源利用' }, weight: 15, score: 96 }],
   },
   movie: {
@@ -150,7 +150,7 @@ const energyInsights: Record<SceneKey, {
     summary: { en: 'Immersive comfort uses more available energy', zh: '沉浸体验正在使用更多可用能源' },
     explanation: { en: 'Entertainment, spatial audio and performance power are active together while solar input is limited.', zh: '影音、空间音响和性能供电同时运行，且当前太阳能输入有限。' },
     opportunity: { en: 'Returning the inverter to Balanced mode after the movie could recover 5 points.', zh: '观影结束后将逆变器恢复至均衡模式，预计可提升5分。' },
-    actions: [{ en: 'Main lights are off', zh: '主灯已关闭' }, { en: 'Ambient lighting is limited to 30%', zh: '氛围灯限制在30%' }, { en: 'Performance power supports cinema loads', zh: '性能供电正在保障影院负载' }],
+    actions: [{ en: 'Microwave popcorn preset awaits confirmation', zh: '微波炉爆米花预设等待手动确认' }, { en: 'Ambient lighting is limited to 30%', zh: '氛围灯限制在30%' }, { en: 'Cooking never auto-starts from a scene', zh: '场景不会自动启动烹饪' }],
     factors: [{ name: { en: 'Load scheduling', zh: '负载调度' }, weight: 35, score: 84 }, { name: { en: 'Standby control', zh: '待机管理' }, weight: 25, score: 85 }, { name: { en: 'Power conversion', zh: '电能转换' }, weight: 25, score: 92 }, { name: { en: 'Renewable use', zh: '清洁能源利用' }, weight: 15, score: 82 }],
   },
   sleep: {
@@ -158,7 +158,7 @@ const energyInsights: Record<SceneKey, {
     summary: { en: 'Quiet comfort runs with tightly managed power', zh: '静音舒适体验正在精细控制能耗' },
     explanation: { en: 'Lighting and entertainment loads are off while climate, humidity and security run in low-power modes.', zh: '照明与影音负载已关闭，空调、加湿和安防以低功耗模式运行。' },
     opportunity: { en: 'Raising the climate target by 1°C could add another 2 points.', zh: '将空调目标温度提高1°C，预计还可提升2分。' },
-    actions: [{ en: 'Main lights and entertainment are off', zh: '主灯和影音设备已关闭' }, { en: 'Inverter uses Silent mode', zh: '逆变器运行于静音模式' }, { en: 'Night comfort loads are coordinated', zh: '夜间舒适负载已协同调度' }],
+    actions: [{ en: 'All cooking appliances are locked off', zh: '全部烹饪设备已锁定关闭' }, { en: 'Inverter uses Silent mode', zh: '逆变器运行于静音模式' }, { en: 'Night comfort loads are coordinated', zh: '夜间舒适负载已协同调度' }],
     factors: [{ name: { en: 'Load scheduling', zh: '负载调度' }, weight: 35, score: 96 }, { name: { en: 'Standby control', zh: '待机管理' }, weight: 25, score: 92 }, { name: { en: 'Power conversion', zh: '电能转换' }, weight: 25, score: 94 }, { name: { en: 'Renewable use', zh: '清洁能源利用' }, weight: 15, score: 92 }],
   },
 };
@@ -198,6 +198,24 @@ const visualLoads: VisualLoad[] = [
       away: { on: false, value: { en: 'Off', zh: '已关闭' } },
       movie: { on: true, value: { en: 'Cinema', zh: '影院模式' } },
       sleep: { on: false, value: { en: 'Off', zh: '已关闭' } },
+    },
+  },
+  {
+    key: 'microwave', icon: Microwave, name: { en: 'Microwave', zh: '微波炉' },
+    states: {
+      camp: { on: false, value: { en: 'Ready · Reheat', zh: '待启动 · 加热' } },
+      away: { on: false, value: { en: 'Safety off', zh: '安全断电' } },
+      movie: { on: false, value: { en: 'Popcorn preset', zh: '爆米花预设' } },
+      sleep: { on: false, value: { en: 'Night lock', zh: '夜间锁定' } },
+    },
+  },
+  {
+    key: 'induction', icon: CookingPot, name: { en: 'Induction cooktop', zh: '电磁炉' },
+    states: {
+      camp: { on: false, value: { en: 'Ready · Simmer', zh: '待启动 · 慢炖' } },
+      away: { on: false, value: { en: 'Safety off', zh: '安全断电' } },
+      movie: { on: false, value: { en: 'Safety off', zh: '安全断电' } },
+      sleep: { on: false, value: { en: 'Night lock', zh: '夜间锁定' } },
     },
   },
   {
@@ -284,6 +302,8 @@ const manualLoadValues: Record<LoadKey, { on: Localized; off: Localized }> = {
   audio: { on: { en: 'Immersive', zh: '沉浸模式' }, off: { en: 'Off', zh: '已关闭' } },
   inverter: { on: { en: 'Manual power', zh: '手动供电' }, off: { en: 'Powered off', zh: '已关闭' } },
   lock: { on: { en: 'Secured', zh: '已锁定' }, off: { en: 'Unlocked', zh: '已解锁' } },
+  microwave: { on: { en: 'Reheat · 800 W', zh: '加热 · 800 W' }, off: { en: 'Ready · Manual start', zh: '待启动 · 手动确认' } },
+  induction: { on: { en: 'Simmer · 600 W', zh: '慢炖 · 600 W' }, off: { en: 'Safety off', zh: '安全关闭' } },
   'temperature-sensor': { on: { en: 'Online', zh: '在线' }, off: { en: 'Offline', zh: '离线' } },
   'air-sensor': { on: { en: 'Online', zh: '在线' }, off: { en: 'Offline', zh: '离线' } },
   'noise-sensor': { on: { en: 'Online', zh: '在线' }, off: { en: 'Offline', zh: '离线' } },
@@ -298,6 +318,8 @@ const controlLabels: Record<string, Localized> = {
   Warm: { en: 'Warm', zh: '暖光' }, Sunset: { en: 'Sunset', zh: '日落' }, Ocean: { en: 'Ocean', zh: '海洋' }, Violet: { en: 'Violet', zh: '紫罗兰' },
   Immersive: { en: 'Immersive', zh: '沉浸' }, Music: { en: 'Music', zh: '音乐' }, Night: { en: 'Night', zh: '夜间' },
   Eco: { en: 'Eco', zh: '节能' }, Balanced: { en: 'Balanced', zh: '均衡' }, Performance: { en: 'Performance', zh: '性能' }, Silent: { en: 'Silent', zh: '静音' },
+  Reheat: { en: 'Reheat', zh: '加热' }, Defrost: { en: 'Defrost', zh: '解冻' }, Popcorn: { en: 'Popcorn', zh: '爆米花' }, Manual: { en: 'Manual', zh: '手动' },
+  Simmer: { en: 'Simmer', zh: '慢炖' }, Boil: { en: 'Boil', zh: '烧水' }, Fry: { en: 'Fry', zh: '煎炒' },
   '30 sec': { en: '30 sec', zh: '30秒' }, '1 min': { en: '1 min', zh: '1分钟' }, Off: { en: 'Off', zh: '关闭' },
 };
 
@@ -305,10 +327,10 @@ const controlTextFor = (value: string, locale: Locale) => controlLabels[value]?.
 
 function createSceneControls(scene: SceneKey): DeviceControls {
   const presets = {
-    camp: { climateMode: 'Auto', target: 23, fan: 'Auto', main: 65, cct: 3200, shade: 100, humid: 48, ambient: 35, ambientColor: 'Warm', volume: 28, audio: 'Immersive', inverter: 'Balanced' },
-    away: { climateMode: 'Auto', target: 27, fan: 'Low', main: 0, cct: 3200, shade: 0, humid: 45, ambient: 0, ambientColor: 'Warm', volume: 0, audio: 'Night', inverter: 'Eco' },
-    movie: { climateMode: 'Cool', target: 22, fan: 'Low', main: 0, cct: 3000, shade: 0, humid: 48, ambient: 30, ambientColor: 'Violet', volume: 42, audio: 'Immersive', inverter: 'Performance' },
-    sleep: { climateMode: 'Sleep', target: 24, fan: 'Low', main: 0, cct: 2700, shade: 0, humid: 48, ambient: 15, ambientColor: 'Warm', volume: 0, audio: 'Night', inverter: 'Silent' },
+    camp: { climateMode: 'Auto', target: 23, fan: 'Auto', main: 65, cct: 3200, shade: 100, humid: 48, ambient: 35, ambientColor: 'Warm', volume: 28, audio: 'Immersive', inverter: 'Balanced', microwaveProgram: 'Reheat', microwavePower: 800, microwaveTimer: 90, microwaveLock: false, inductionMode: 'Simmer', inductionPower: 600, inductionTimer: 15, inductionLock: false },
+    away: { climateMode: 'Auto', target: 27, fan: 'Low', main: 0, cct: 3200, shade: 0, humid: 45, ambient: 0, ambientColor: 'Warm', volume: 0, audio: 'Night', inverter: 'Eco', microwaveProgram: 'Reheat', microwavePower: 600, microwaveTimer: 60, microwaveLock: true, inductionMode: 'Simmer', inductionPower: 600, inductionTimer: 10, inductionLock: true },
+    movie: { climateMode: 'Cool', target: 22, fan: 'Low', main: 0, cct: 3000, shade: 0, humid: 48, ambient: 30, ambientColor: 'Violet', volume: 42, audio: 'Immersive', inverter: 'Performance', microwaveProgram: 'Popcorn', microwavePower: 900, microwaveTimer: 150, microwaveLock: false, inductionMode: 'Simmer', inductionPower: 500, inductionTimer: 10, inductionLock: true },
+    sleep: { climateMode: 'Sleep', target: 24, fan: 'Low', main: 0, cct: 2700, shade: 0, humid: 48, ambient: 15, ambientColor: 'Warm', volume: 0, audio: 'Night', inverter: 'Silent', microwaveProgram: 'Reheat', microwavePower: 600, microwaveTimer: 60, microwaveLock: true, inductionMode: 'Simmer', inductionPower: 500, inductionTimer: 10, inductionLock: true },
   }[scene];
 
   return {
@@ -321,6 +343,8 @@ function createSceneControls(scene: SceneKey): DeviceControls {
     audio: { volume: presets.volume, profile: presets.audio },
     inverter: { mode: presets.inverter, outputLimit: scene === 'away' ? 600 : 1800 },
     lock: { autoLock: scene === 'away' || scene === 'sleep' ? '30 sec' : 'Off' },
+    microwave: { program: presets.microwaveProgram, power: presets.microwavePower, timer: presets.microwaveTimer, doorClosed: true, safetyLock: presets.microwaveLock },
+    induction: { mode: presets.inductionMode, power: presets.inductionPower, timer: presets.inductionTimer, childLock: presets.inductionLock },
   };
 }
 
@@ -354,9 +378,17 @@ export default function Home() {
       : override && load.kind === 'sensor'
         ? load.states[scene]
         : { on: override, value: manualLoadValues[load.key][override ? 'on' : 'off'] };
-    if (!base.on || load.kind === 'sensor') return base;
     const controls = deviceControls[load.key] ?? {};
-    const localized = (en: string, zh: string): LoadState => ({ on: true, value: { en, zh } });
+    const localized = (en: string, zh: string, on = true): LoadState => ({ on, value: { en, zh } });
+    if (!base.on || load.kind === 'sensor') {
+      if (load.key === 'microwave' && controls.safetyLock === false) {
+        return localized(`Ready · ${controlTextFor(String(controls.program), 'en')}`, `待启动 · ${controlTextFor(String(controls.program), 'zh')}`, false);
+      }
+      if (load.key === 'induction' && controls.childLock === false) {
+        return localized(`Ready · ${controlTextFor(String(controls.mode), 'en')}`, `待启动 · ${controlTextFor(String(controls.mode), 'zh')}`, false);
+      }
+      return base;
+    }
     switch (load.key) {
       case 'climate': return localized(`${controlTextFor(String(controls.mode), 'en')} · ${controls.target}°C`, `${controlTextFor(String(controls.mode), 'zh')} · ${controls.target}°C`);
       case 'lights': return localized(`${Number(controls.colorTemperature) <= 3300 ? 'Warm' : Number(controls.colorTemperature) >= 5000 ? 'Cool' : 'Neutral'} · ${controls.brightness}%`, `${Number(controls.colorTemperature) <= 3300 ? '暖光' : Number(controls.colorTemperature) >= 5000 ? '冷光' : '中性光'} · ${controls.brightness}%`);
@@ -366,6 +398,12 @@ export default function Home() {
       case 'ambient': return localized(`${controlTextFor(String(controls.color), 'en')} · ${controls.brightness}%`, `${controlTextFor(String(controls.color), 'zh')} · ${controls.brightness}%`);
       case 'audio': return localized(`${controlTextFor(String(controls.profile), 'en')} · ${controls.volume}%`, `${controlTextFor(String(controls.profile), 'zh')} · ${controls.volume}%`);
       case 'inverter': return localized(controlTextFor(String(controls.mode), 'en'), controlTextFor(String(controls.mode), 'zh'));
+      case 'microwave': {
+        const seconds = Number(controls.timer ?? 90);
+        const time = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+        return localized(`${controlTextFor(String(controls.program), 'en')} · ${controls.power} W · ${time}`, `${controlTextFor(String(controls.program), 'zh')} · ${controls.power} W · ${time}`);
+      }
+      case 'induction': return localized(`${controlTextFor(String(controls.mode), 'en')} · ${controls.power} W`, `${controlTextFor(String(controls.mode), 'zh')} · ${controls.power} W`);
       default: return base;
     }
   };
@@ -382,6 +420,8 @@ export default function Home() {
   const audioOn = getLoadByKey('audio').on;
   const humidifierOn = getLoadByKey('humidifier').on;
   const inverterOn = getLoadByKey('inverter').on;
+  const microwaveOn = getLoadByKey('microwave').on;
+  const inductionOn = getLoadByKey('induction').on;
   const temperatureSensor = getLoadByKey('temperature-sensor');
   const airSensor = getLoadByKey('air-sensor');
   const noiseSensor = getLoadByKey('noise-sensor');
@@ -414,6 +454,8 @@ export default function Home() {
   function toggleLoad(load: VisualLoad) {
     if (load.kind === 'sensor') return;
     const next = !getLoadState(load).on;
+    if (load.key === 'microwave' && next && deviceControls.microwave?.safetyLock === true) return;
+    if (load.key === 'induction' && next && deviceControls.induction?.childLock === true) return;
     setDeviceControls(previous => {
       const currentControls = previous[load.key] ?? {};
       const nextControls = { ...currentControls };
@@ -428,6 +470,8 @@ export default function Home() {
 
   function setLoadPower(load: VisualLoad, on: boolean) {
     if (load.kind === 'sensor') return;
+    if (load.key === 'microwave' && on && deviceControls.microwave?.safetyLock === true) return;
+    if (load.key === 'induction' && on && deviceControls.induction?.childLock === true) return;
     setLoadOverrides(previous => ({ ...previous, [activeScene]: { ...previous[activeScene], [load.key]: on } }));
   }
 
@@ -437,6 +481,14 @@ export default function Home() {
       const opened = Number(value) > 0;
       const load = visualLoads.find(item => item.key === key)!;
       setLoadPower(load, opened);
+    }
+    if (key === 'induction' && field === 'childLock' && Boolean(value)) {
+      const load = visualLoads.find(item => item.key === key)!;
+      setLoadPower(load, false);
+    }
+    if (key === 'microwave' && field === 'safetyLock' && Boolean(value)) {
+      const load = visualLoads.find(item => item.key === key)!;
+      setLoadPower(load, false);
     }
   }
 
@@ -513,6 +565,8 @@ export default function Home() {
               <div className={`screen-effect ${tvOn ? 'is-running' : 'is-stopped'}`}><Film /></div>
               <div className={`audio-effect ${audioOn ? 'is-running' : 'is-stopped'}`}><span /><span /><span /></div>
               <div className={`mist-effect ${humidifierOn ? 'is-running' : 'is-stopped'}`}><span /><span /><span /></div>
+              <div className={`microwave-effect ${microwaveOn ? 'is-running' : 'is-stopped'}`}><span /></div>
+              <div className={`induction-effect ${inductionOn ? 'is-running' : 'is-stopped'}`}><span /><span /></div>
               <svg
                 className={`ambient-effect ${ambientOn ? `is-running ambient-${activeScene}` : 'is-stopped'}`}
                 viewBox="0 0 1000 620"
@@ -656,7 +710,13 @@ export default function Home() {
             {visualLoads.map(load => {
               const LoadIcon = load.icon;
               const state = getLoadState(load);
-              const quickStateLabel = load.key === 'shades'
+              const quickControlLocked = !state.on && (
+                (load.key === 'microwave' && deviceControls.microwave?.safetyLock === true)
+                || (load.key === 'induction' && deviceControls.induction?.childLock === true)
+              );
+              const quickStateLabel = quickControlLocked
+                ? (locale === 'en' ? 'LOCKED' : '已锁')
+                : load.key === 'shades'
                 ? (state.on ? (locale === 'en' ? 'OPEN' : '开') : (locale === 'en' ? 'CLOSED' : '合'))
                 : load.key === 'lock'
                   ? (state.on ? (locale === 'en' ? 'LOCKED' : '已锁') : (locale === 'en' ? 'UNLOCKED' : '未锁'))
@@ -676,8 +736,9 @@ export default function Home() {
                       <Switch
                         className="card-quick-switch"
                         checked={state.on}
+                        disabled={quickControlLocked}
                         onCheckedChange={() => toggleLoad(load)}
-                        aria-label={`${locale === 'en' ? 'Quick control' : '快捷控制'} · ${pick(load.name)} · ${quickStateLabel}`}
+                        aria-label={`${locale === 'en' ? 'Quick control' : '快捷控制'} · ${pick(load.name)} · ${quickStateLabel}${quickControlLocked ? ` · ${locale === 'en' ? 'Open settings to unlock' : '请进入设置解锁'}` : ''}`}
                       />
                     </div>
                   )}
@@ -773,6 +834,10 @@ function DeviceControlPanel({ device, state, controls, locale, onToggle, onPower
         return <><div className="control-group"><span className="control-label">{t('Quick position', '快捷位置')}</span><div className="control-actions"><button className={numberValue('position', 0) === 100 ? 'is-selected' : ''} type="button" onClick={() => { onPower(true); onUpdate('position', 100); }}>{t('Open', '全开')}</button><button className={numberValue('position', 0) === 50 ? 'is-selected' : ''} type="button" onClick={() => { onPower(true); onUpdate('position', 50); }}>{t('Half', '半开')}</button><button className={numberValue('position', 0) === 0 ? 'is-selected' : ''} type="button" onClick={() => { onPower(false); onUpdate('position', 0); }}>{t('Close', '关闭')}</button></div></div><RangeControl label={t('Opening position', '开启位置')} value={numberValue('position', 0)} min={0} max={100} unit="%" onChange={value => onUpdate('position', value)} /></>;
       case 'tv':
         return <><SegmentedControl label={t('Input source', '输入源')} options={['Streaming', 'HDMI', 'TV']} value={stringValue('source', 'Streaming')} locale={locale} onChange={value => onUpdate('source', value)} /><SegmentedControl label={t('Picture preset', '画面模式')} options={['Cinema', 'Standard', 'Game']} value={stringValue('picture', 'Standard')} locale={locale} onChange={value => onUpdate('picture', value)} /></>;
+      case 'microwave':
+        return <><SegmentedControl label={t('Cooking program', '烹饪程序')} options={['Reheat', 'Defrost', 'Popcorn', 'Manual']} value={stringValue('program', 'Reheat')} locale={locale} onChange={value => onUpdate('program', value)} /><RangeControl label={t('Microwave power', '微波功率')} value={numberValue('power', 800)} min={200} max={1000} step={100} unit="W" onChange={value => onUpdate('power', value)} /><RangeControl label={t('Cook time', '加热时间')} value={numberValue('timer', 90)} min={30} max={600} step={30} unit="s" onChange={value => onUpdate('timer', value)} /><div className="control-group"><span className="control-label">{t('Safety lock', '安全锁')}</span><div className="control-actions two-up"><button className={controls.safetyLock === true ? 'is-selected' : ''} type="button" onClick={() => onUpdate('safetyLock', true)}><Lock aria-hidden="true" />{t('Locked', '已锁定')}</button><button className={controls.safetyLock !== true ? 'is-selected' : ''} type="button" onClick={() => onUpdate('safetyLock', false)}><DoorClosed aria-hidden="true" />{t('Unlocked', '已解锁')}</button></div></div><div className="device-safety-note"><ShieldCheck aria-hidden="true" /><span><strong>{t('Manual start required', '必须手动启动')}</strong>{t('Scenes may prepare a preset or stop heating, but never start the microwave automatically. Door interlock: closed.', '场景可准备预设或停止加热，但绝不会自动启动微波炉。门体联锁：已闭合。')}</span></div></>;
+      case 'induction':
+        return <><SegmentedControl label={t('Cooking mode', '烹饪模式')} options={['Simmer', 'Boil', 'Fry']} value={stringValue('mode', 'Simmer')} locale={locale} onChange={value => onUpdate('mode', value)} /><RangeControl label={t('Heating power', '加热功率')} value={numberValue('power', 600)} min={300} max={1800} step={100} unit="W" onChange={value => onUpdate('power', value)} /><RangeControl label={t('Auto-off timer', '定时关闭')} value={numberValue('timer', 15)} min={0} max={60} step={5} unit="min" onChange={value => onUpdate('timer', value)} /><div className="control-group"><span className="control-label">{t('Child lock', '童锁')}</span><div className="control-actions two-up"><button className={controls.childLock === true ? 'is-selected' : ''} type="button" onClick={() => onUpdate('childLock', true)}><Lock aria-hidden="true" />{t('Locked', '已锁定')}</button><button className={controls.childLock !== true ? 'is-selected' : ''} type="button" onClick={() => onUpdate('childLock', false)}><DoorClosed aria-hidden="true" />{t('Unlocked', '已解锁')}</button></div></div><div className="device-safety-note"><ShieldCheck aria-hidden="true" /><span><strong>{t('Cookware detection active', '锅具检测已启用')}</strong>{t('A scene can switch off and lock the cooktop, but heating always requires a manual start.', '场景可以关闭并锁定电磁炉，但加热始终需要用户手动启动。')}</span></div></>;
       case 'humidifier':
         return <><RangeControl label={t('Target humidity', '目标湿度')} value={numberValue('targetHumidity', 48)} min={35} max={70} unit="%" onChange={value => onUpdate('targetHumidity', value)} /><SegmentedControl label={t('Humidification mode', '加湿模式')} options={['Auto', 'Quiet', 'Boost']} value={stringValue('mode', 'Auto')} locale={locale} onChange={value => onUpdate('mode', value)} /></>;
       case 'ambient': {
@@ -791,14 +856,24 @@ function DeviceControlPanel({ device, state, controls, locale, onToggle, onPower
   })();
 
   const hidesPower = device.key === 'shades' || device.key === 'lock';
+  const powerBlocked = !state.on && (
+    (device.key === 'microwave' && controls.safetyLock === true)
+    || (device.key === 'induction' && controls.childLock === true)
+  );
+  const powerLabel = device.key === 'microwave'
+    ? (state.on ? t('Stop heating', '停止加热') : powerBlocked ? t('Unlock first', '请先解锁') : t('Start heating', '开始加热'))
+    : device.key === 'induction'
+      ? (state.on ? t('Stop cooking', '停止加热') : powerBlocked ? t('Unlock first', '请先解锁') : t('Start cooking', '开始加热'))
+      : state.on ? t('Turn off', '关闭') : t('Turn on', '开启');
+  const controlsAvailable = state.on || hidesPower || device.key === 'microwave' || device.key === 'induction';
   return (
     <section className="device-control-panel" aria-label={`${device.name[locale]} ${t('controls', '控制')}`}>
       <div className="device-control-summary">
         <span className="device-control-icon"><DeviceIcon aria-hidden="true" /></span>
         <div><small>{t('CURRENT STATE', '当前状态')}</small><strong aria-live="polite">{state.value[locale]}</strong><span>{t('Changes apply immediately to this scene', '修改将立即应用到当前场景')}</span></div>
-        {!hidesPower && <button className={`device-power-button ${state.on ? 'is-on' : ''}`} type="button" aria-pressed={state.on} onClick={onToggle}><Power aria-hidden="true" />{state.on ? t('Turn off', '关闭') : t('Turn on', '开启')}</button>}
+        {!hidesPower && <button className={`device-power-button ${state.on ? 'is-on' : ''}`} type="button" aria-pressed={state.on} disabled={powerBlocked} onClick={onToggle}><Power aria-hidden="true" />{powerLabel}</button>}
       </div>
-      <div className={`device-control-fields ${state.on || hidesPower ? '' : 'is-disabled'}`}>{controlBody}</div>
+      <div className={`device-control-fields ${controlsAvailable ? '' : 'is-disabled'}`}>{controlBody}</div>
     </section>
   );
 }
