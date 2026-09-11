@@ -692,7 +692,7 @@ export default function Home() {
                 </figure>
                 <div className={`security-status ${intrusion ? 'security-alert' : ''}`}>
                   <div className="security-emblem">{intrusion ? <ShieldAlert aria-hidden="true" /> : <Radar aria-hidden="true" />}</div>
-                  <div><small>{locale === 'en' ? '360° PERIMETER' : '360° 周界状态'}</small><strong>{intrusion ? (locale === 'en' ? 'Threat detected · Entry side' : '车门侧检测到异常') : (locale === 'en' ? '4 cameras · Full coverage' : '4路摄像头 · 全方位守护')}</strong></div>
+                  <strong className="security-status-label">{locale === 'en' ? 'Sentinel Mode' : '哨兵模式'}</strong>
                   <div className={intrusion ? 'perimeter-orbit has-alert' : 'perimeter-orbit'} aria-hidden="true"><span /><i /><i /><i /><i /></div>
                 </div>
                 <div className="readonly-note">{locale === 'en' ? 'Tap any camera to enlarge · Continuous recording' : '点击任一画面放大查看 · 持续录像'}</div>
