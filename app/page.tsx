@@ -366,6 +366,7 @@ export default function Home() {
   const [selectedLoadKey, setSelectedLoadKey] = useState<LoadKey | null>(null);
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
   const [efficiencyOpen, setEfficiencyOpen] = useState(false);
+  const [aiAdviceOpen, setAiAdviceOpen] = useState(false);
   const [efficiencyScene, setEfficiencyScene] = useState<SceneKey>('camp');
   const [deviceControls, setDeviceControls] = useState<DeviceControls>(() => createSceneControls('camp'));
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -444,6 +445,28 @@ export default function Home() {
   const forecastCurvePath = batteryIsCharging
     ? 'M2 49 C28 45 31 32 55 35 S84 16 108 22 S145 8 178 13'
     : 'M2 11 C28 14 38 22 58 20 S91 33 112 31 S149 46 178 49';
+  const usableBatteryKwh = 8.2;
+  const microwaveSessionKwh = microwaveOn ? (microwavePower / 1000) * (Number(deviceControls.microwave?.timer ?? 90) / 3600) : 0;
+  const inductionSessionKwh = inductionOn ? (inductionPower / 1000) * (Number(deviceControls.induction?.timer ?? 15) / 60) : 0;
+  const remainingBatteryKwh = Math.max(0, usableBatteryKwh - microwaveSessionKwh - inductionSessionKwh);
+  const habitEnergy = { meal: 0.65, movie: 1.6, sleep: 2.4, daily: 5.3 };
+  const supportedMeals = Math.floor(remainingBatteryKwh / habitEnergy.meal);
+  const supportedMovies = Math.floor(remainingBatteryKwh / habitEnergy.movie);
+  const supportedNights = Math.floor(remainingBatteryKwh / habitEnergy.sleep);
+  const supportedRoutineDays = (remainingBatteryKwh / habitEnergy.daily).toFixed(1);
+  const dailyRoutineSupported = remainingBatteryKwh >= habitEnergy.daily;
+  const aiSummary = kitchenLoadWatts > 0
+    ? batteryIsCharging
+      ? (locale === 'en' ? `Solar still covers the ${kitchenLoadWatts} W kitchen load. Your usual day remains supported.` : `太阳能仍可覆盖${kitchenLoadWatts} W厨房负载，日常用能计划可继续维持。`)
+      : microwaveOn && inductionOn
+        ? (locale === 'en' ? `Both kitchen loads are drawing the battery at ${batteryFlowPower}. Stagger cooking to reduce the peak.` : `两项厨房负载使电池以${batteryFlowPower}放电，建议错峰烹饪以降低峰值。`)
+        : (locale === 'en' ? `Cooking is included in the forecast. Your usual routine can continue for about ${supportedRoutineDays} days.` : `烹饪用电已计入预测，按日常习惯预计仍可维持约${supportedRoutineDays}天。`)
+    : (locale === 'en' ? `Based on your daily habits, the current battery supports about ${supportedRoutineDays} days.` : `根据你的日常习惯，当前电量预计可维持约${supportedRoutineDays}天。`);
+  const aiRecommendation = microwaveOn && inductionOn
+    ? (locale === 'en' ? `Finish the microwave cycle first, then use the cooktop. This removes ${Math.min(microwavePower, inductionPower)} W from the current peak without changing the meal plan.` : `建议先完成微波炉加热，再使用电磁炉；这样可在不影响做饭计划的情况下，将当前峰值降低${Math.min(microwavePower, inductionPower)} W。`)
+    : kitchenLoadWatts > 0
+      ? (locale === 'en' ? 'Keep the cooking timer active and avoid starting the second kitchen appliance during a climate boost.' : '建议保留烹饪定时，并避免在空调强力运行时同时启动另一项厨房电器。')
+      : (locale === 'en' ? 'Use high-power cooking during the strongest solar window; reserve evening battery for movies and overnight comfort.' : '建议在太阳能最强时段使用高功率烹饪设备，将晚间电量留给观影与整夜舒适环境。');
   const temperatureSensor = getLoadByKey('temperature-sensor');
   const airSensor = getLoadByKey('air-sensor');
   const noiseSensor = getLoadByKey('noise-sensor');
@@ -463,6 +486,7 @@ export default function Home() {
     setLoadOverrides({});
     setDeviceControls(createSceneControls(key));
     setLoadSheetOpen(false);
+    setAiAdviceOpen(false);
     setSelectedLoadKey(null);
     setSelectedCameraId(null);
     setIntrusion(false);
@@ -472,7 +496,7 @@ export default function Home() {
 
   function resetDemo() {
     if (timer.current) clearTimeout(timer.current);
-    setPendingScene(null); setIntrusion(false); setActiveScene('camp'); setLoadOverrides({}); setDeviceControls(createSceneControls('camp')); setSelectedLoadKey(null); setSelectedCameraId(null); setLoadSheetOpen(false); setEfficiencyOpen(false); setEfficiencyScene('camp');
+    setPendingScene(null); setIntrusion(false); setActiveScene('camp'); setLoadOverrides({}); setDeviceControls(createSceneControls('camp')); setSelectedLoadKey(null); setSelectedCameraId(null); setLoadSheetOpen(false); setEfficiencyOpen(false); setAiAdviceOpen(false); setEfficiencyScene('camp');
   }
 
   function toggleLoad(load: VisualLoad) {
@@ -544,10 +568,10 @@ export default function Home() {
 
       <div className="dashboard">
         <div className="workspace-grid">
-          <aside className="panel energy-panel">
+          <aside className={`panel energy-panel ${kitchenLoadWatts > 0 ? 'has-kitchen-load' : ''}`}>
             <div className="panel-heading">
               <div><span className="eyebrow">{locale === 'en' ? 'ENERGY SYSTEM' : '能源系统'}</span><h2>{locale === 'en' ? 'Power flow' : '能量流'}</h2><span className="readonly-note">{locale === 'en' ? 'View only' : '仅展示'}</span></div>
-              <span className="healthy-badge"><CircleDot aria-hidden="true" /> {locale === 'en' ? 'Healthy' : '正常'}</span>
+              <span className={`healthy-badge ${kitchenLoadWatts > 0 ? 'is-managing-load' : ''}`}><CircleDot aria-hidden="true" /> {kitchenLoadWatts > 0 ? (locale === 'en' ? 'Load managed' : '负载调度中') : (locale === 'en' ? 'Healthy' : '正常')}</span>
             </div>
             <div className={`battery-summary ${batteryIsCharging ? 'is-charging' : 'is-discharging'}`}>
             <div className="battery-orbit" aria-label={locale === 'en' ? 'Battery state of charge 82 percent' : '电池电量82%'}>
@@ -556,7 +580,7 @@ export default function Home() {
             </div>
               <span className="battery-flow-status" role="status" aria-atomic="true" aria-label={locale === 'en' ? `RV load ${rvLoadValue}; battery ${batteryFlowLabel.toLowerCase()} at ${batteryFlowPower}` : `房车负载${rvLoadValue}；电池${batteryFlowLabel}${batteryFlowPower}`}><span className="battery-flow-direction">{batteryIsCharging ? <ArrowDown aria-hidden="true" /> : <ArrowUp aria-hidden="true" />}{batteryFlowLabel}</span><strong>{batteryFlowPower}</strong></span>
             </div>
-            <div className="energy-metrics">
+            <div className="energy-metrics" aria-live="polite" aria-atomic="true">
               <Metric icon={Sun} label={locale === 'en' ? 'Solar' : '太阳能'} value={current.solar} tone="cyan" />
               <Metric icon={batteryIsCharging ? BatteryCharging : Battery} label={locale === 'en' ? (batteryIsCharging ? 'Battery charging' : 'Battery discharge') : (batteryIsCharging ? '电池充电' : '电池放电')} value={batteryFlowValue} tone={batteryIsCharging ? 'green' : 'amber'} />
               <Metric icon={Power} label={locale === 'en' ? 'RV load' : '房车负载'} value={rvLoadValue} tone="violet" />
@@ -569,7 +593,7 @@ export default function Home() {
                 <path d={`${forecastCurvePath} L178 58 L2 58 Z`} fill="url(#chartFill)" />
                 <path d={forecastCurvePath} fill="none" stroke={batteryIsCharging ? '#46c6df' : '#f0b766'} strokeWidth="2" strokeLinecap="round" />
               </svg>
-              <div className={`forecast-foot ${kitchenLoadWatts > 0 ? 'is-high-load' : ''}`}>{kitchenLoadWatts > 0 ? <CookingPot aria-hidden="true" /> : <Leaf aria-hidden="true" />} {kitchenLoadWatts > 0 ? (locale === 'en' ? `Kitchen load +${kitchenLoadWatts} W included` : `已计入厨房负载 +${kitchenLoadWatts} W`) : (locale === 'en' ? 'Optimized for this stay' : '已为本次驻留优化')}</div>
+              <div className={`forecast-foot ${kitchenLoadWatts > 0 ? 'is-high-load' : ''}`}>{kitchenLoadWatts > 0 ? <CookingPot aria-hidden="true" /> : <Leaf aria-hidden="true" />} {kitchenLoadWatts > 0 ? (locale === 'en' ? `Kitchen +${kitchenLoadWatts} W · ${batteryFlowLabel} ${batteryFlowPower}` : `厨房 +${kitchenLoadWatts} W · 电池${batteryFlowLabel} ${batteryFlowPower}`) : (locale === 'en' ? 'Optimized for this stay' : '已为本次驻留优化')}</div>
             </div>
           </aside>
 
@@ -699,7 +723,10 @@ export default function Home() {
                   return <div className="device-row" key={load.key}><span className="device-icon is-on"><DeviceIcon aria-hidden="true" /></span><div><strong>{pick(load.name)}</strong><small>{pick(state.value)}</small></div><span className="device-state is-on">{locale === 'en' ? 'ON' : '开'}</span></div>;
                 })}</div> : activeLoads.length === 0 ? <div className="loads-empty"><Power aria-hidden="true" /><span>{locale === 'en' ? 'All cabin devices are offline' : '所有舱内设备均已离线'}</span></div> : null}
                 <button className="panel-loads-trigger" onClick={() => setLoadSheetOpen(true)}><Power aria-hidden="true" /><span>{locale === 'en' ? `View all ${visualLoads.length} devices` : `查看全部${visualLoads.length}项设备`}</span><ChevronRight aria-hidden="true" /></button>
-                <div className="ai-insight"><Sparkles aria-hidden="true" /><p><strong>{locale === 'en' ? 'AI insight' : 'AI建议'}</strong><span>{activeScene === 'movie' ? (locale === 'en' ? 'Enough energy for two movies and overnight climate.' : '当前电量足够观看两部电影并维持整夜空调。') : (locale === 'en' ? 'Solar surplus will restore 12% battery before sunset.' : '日落前，太阳能余量预计可补充12%电量。')}</span></p></div>
+                <button className="ai-insight" type="button" onClick={() => setAiAdviceOpen(true)} aria-haspopup="dialog">
+                  <Sparkles aria-hidden="true" />
+                  <p><strong>{locale === 'en' ? 'RENOGY AI ENERGY ADVISOR' : 'RENOGY AI 能源顾问'}</strong><span>{aiSummary}</span><b>{locale === 'en' ? 'View personal energy plan' : '查看个人能源计划'} <ChevronRight aria-hidden="true" /></b></p>
+                </button>
               </>
             )}
           </aside>
@@ -805,6 +832,33 @@ export default function Home() {
           <section className="efficiency-opportunity"><Sparkles aria-hidden="true" /><div><span>{locale === 'en' ? 'NEXT OPPORTUNITY' : '下一步建议'}</span><p>{pick(selectedEnergyInsight.opportunity)}</p></div></section>
         </div>
         <p className="efficiency-model-note">{locale === 'en' ? 'Concept score based on the current scene configuration and simulated demo data.' : '概念评分依据当前场景配置与模拟演示数据计算。'}</p>
+      </DialogContent>
+    </Dialog>
+    <Dialog open={aiAdviceOpen} onOpenChange={setAiAdviceOpen}>
+      <DialogContent className="ai-advice-dialog" showCloseButton={false}>
+        <DialogHeader className="efficiency-dialog-header">
+          <div><span className="eyebrow">RENOGY AI ENERGY ADVISOR</span><DialogTitle>{locale === 'en' ? 'Your personal energy outlook' : '你的个人能源预测'}</DialogTitle><DialogDescription>{locale === 'en' ? 'Based on 14 days of simulated habits: 2 meals, 1 movie and 8 hours of overnight comfort each day.' : '依据模拟的近14天习惯：每天2顿饭、1部电影和8小时夜间舒适环境。'}</DialogDescription></div>
+          <DialogClose className="efficiency-close" aria-label={locale === 'en' ? 'Close AI energy plan' : '关闭AI能源计划'}><X aria-hidden="true" /></DialogClose>
+        </DialogHeader>
+        <section className={`ai-plan-overview ${dailyRoutineSupported ? 'is-supported' : 'needs-action'}`}>
+          <span className="ai-plan-status"><BatteryCharging aria-hidden="true" />{dailyRoutineSupported ? (locale === 'en' ? 'TODAY\'S ROUTINE IS COVERED' : '今日习惯用能可支撑') : (locale === 'en' ? 'ACTION NEEDED' : '需要调整')}</span>
+          <h3>{aiSummary}</h3>
+          <div className="ai-plan-numbers"><span><small>{locale === 'en' ? 'Usable battery' : '可用电量'}</small><strong>{remainingBatteryKwh.toFixed(1)} kWh</strong></span><span><small>{locale === 'en' ? 'Typical day' : '日常用能'}</small><strong>{habitEnergy.daily.toFixed(1)} kWh</strong></span><span><small>{locale === 'en' ? 'Live RV load' : '实时房车负载'}</small><strong>{rvLoadValue}</strong></span></div>
+        </section>
+        <section className="ai-capacity-section" aria-labelledby="ai-capacity-title">
+          <div className="efficiency-section-heading"><div><span className="eyebrow">WHAT YOUR BATTERY CAN SUPPORT</span><h3 id="ai-capacity-title">{locale === 'en' ? 'Equivalent remaining activities' : '剩余电量等效可支持'}</h3></div><small>{locale === 'en' ? 'Each estimate shown separately' : '各项为独立估算'}</small></div>
+          <div className="ai-capacity-grid">
+            <article><CookingPot aria-hidden="true" /><span><strong>{supportedMeals}</strong><small>{locale === 'en' ? 'meals' : '顿饭'}</small></span><p>{locale === 'en' ? 'Typical microwave + cooktop use' : '典型微波炉与电磁炉组合'}</p></article>
+            <article><Film aria-hidden="true" /><span><strong>{supportedMovies}</strong><small>{locale === 'en' ? 'movies' : '部电影'}</small></span><p>{locale === 'en' ? '2-hour cinema sessions' : '每次2小时影院体验'}</p></article>
+            <article><Moon aria-hidden="true" /><span><strong>{supportedNights}</strong><small>{locale === 'en' ? 'nights' : '晚'}</small></span><p>{locale === 'en' ? 'Climate + humidifier + security' : '空调、加湿与夜间安防'}</p></article>
+            <article><Gauge aria-hidden="true" /><span><strong>{supportedRoutineDays}</strong><small>{locale === 'en' ? 'days' : '天'}</small></span><p>{locale === 'en' ? 'Your complete daily routine' : '完整日常用能习惯'}</p></article>
+          </div>
+        </section>
+        <section className="ai-habit-plan">
+          <div><span className="eyebrow">{locale === 'en' ? 'LEARNED DAILY HABITS' : '已学习的每日习惯'}</span><p><CookingPot aria-hidden="true" />{locale === 'en' ? '2 meals' : '2顿饭'}<strong>1.3 kWh</strong></p><p><Film aria-hidden="true" />{locale === 'en' ? '1 movie' : '1部电影'}<strong>1.6 kWh</strong></p><p><Moon aria-hidden="true" />{locale === 'en' ? '8 h overnight comfort' : '8小时夜间舒适'}<strong>2.4 kWh</strong></p></div>
+          <div className="ai-next-action"><Sparkles aria-hidden="true" /><div><span>{locale === 'en' ? 'RECOMMENDED NEXT ACTION' : '建议下一步'}</span><p>{aiRecommendation}</p></div></div>
+        </section>
+        <p className="efficiency-model-note">{locale === 'en' ? 'AI estimates use simulated 14-day behavior, current device states and demo energy data. Activity estimates are alternatives, not cumulative.' : 'AI估算基于模拟的14天使用习惯、当前设备状态与演示能源数据；各活动数量为分别估算，不可累加。'}</p>
       </DialogContent>
     </Dialog>
     <Dialog open={Boolean(selectedCamera)} onOpenChange={open => { if (!open) setSelectedCameraId(null); }}>
