@@ -496,7 +496,20 @@ export default function Home() {
 
   function resetDemo() {
     if (timer.current) clearTimeout(timer.current);
-    setPendingScene(null); setIntrusion(false); setActiveScene('camp'); setLoadOverrides({}); setDeviceControls(createSceneControls('camp')); setSelectedLoadKey(null); setSelectedCameraId(null); setLoadSheetOpen(false); setEfficiencyOpen(false); setAiAdviceOpen(false); setEfficiencyScene('camp');
+    setPendingScene(null);
+    setIntrusion(false);
+    setLoadOverrides(previous => {
+      const next = { ...previous };
+      delete next[activeScene];
+      return next;
+    });
+    setDeviceControls(createSceneControls(activeScene));
+    setSelectedLoadKey(null);
+    setSelectedCameraId(null);
+    setLoadSheetOpen(false);
+    setEfficiencyOpen(false);
+    setAiAdviceOpen(false);
+    setEfficiencyScene(activeScene);
   }
 
   function toggleLoad(load: VisualLoad) {
@@ -562,7 +575,7 @@ export default function Home() {
           <span className="connection-pill"><Wifi aria-hidden="true" /> {locale === 'en' ? 'Connected' : '已连接'}</span>
           <time>{current.time}</time>
           <button className="icon-button language-button" onClick={() => setLocale(locale === 'en' ? 'zh' : 'en')} aria-label={locale === 'en' ? 'Switch to Chinese' : '切换到英文'}><Languages aria-hidden="true" /><span>{locale === 'en' ? '中文' : 'EN'}</span></button>
-          <button className="icon-button reset-button" onClick={resetDemo} aria-label={locale === 'en' ? 'Reset demo' : '重置演示'}><RotateCcw aria-hidden="true" /><span>{locale === 'en' ? 'Reset' : '重置'}</span></button>
+          <button className="icon-button reset-button" onClick={resetDemo} aria-label={locale === 'en' ? `Reset ${pick(current.name)} mode devices` : `恢复${pick(current.name)}模式设备初始设置`}><RotateCcw aria-hidden="true" /><span>{locale === 'en' ? 'Reset' : '重置'}</span></button>
         </div>
       </header>
 
