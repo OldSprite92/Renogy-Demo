@@ -12,12 +12,14 @@ import {
   Check,
   ChevronRight,
   CircleDot,
+  Coffee,
   CookingPot,
   DoorClosed,
   Droplets,
   Film,
   Gauge,
   Hand,
+  History,
   Languages,
   Lamp,
   Leaf,
@@ -82,8 +84,10 @@ type IconName =
 type LoadKey =
   | 'climate'
   | 'lights'
+  | 'coffee'
   | 'shades'
   | 'tv'
+  | 'camera'
   | 'microwave'
   | 'induction'
   | 'humidifier'
@@ -114,6 +118,18 @@ type LoadOverrides = Partial<
 >;
 type ControlValue = string | number | boolean;
 type DeviceControls = Partial<Record<LoadKey, Record<string, ControlValue>>>;
+type DeviceLogAction = {
+  device: Localized;
+  detail: Localized;
+};
+type DeviceLogEntry = {
+  id: number;
+  sourceKey: string;
+  device: Localized;
+  detail: Localized;
+  time: string;
+  actions?: DeviceLogAction[];
+};
 type Scene = {
   key: SceneKey;
   name: Localized;
@@ -170,6 +186,39 @@ const sentryCameras = [
     detectsIntrusion: false,
   },
 ] as const;
+
+const initialDeviceLogs: DeviceLogEntry[] = [
+  {
+    id: 3,
+    sourceKey: 'initial-lights',
+    device: { en: 'Lights', zh: '灯' },
+    detail: { en: 'Brightness 100%', zh: '亮度 100%' },
+    time: '18:42',
+  },
+  {
+    id: 2,
+    sourceKey: 'initial-climate',
+    device: { en: 'Climate', zh: '空调' },
+    detail: { en: 'Auto · 23°C', zh: '自动 · 23°C' },
+    time: '18:42',
+  },
+  {
+    id: 1,
+    sourceKey: 'initial-camera',
+    device: { en: 'Camera', zh: '摄像头' },
+    detail: { en: 'Privacy mode', zh: '隐私关闭' },
+    time: '18:42',
+  },
+];
+
+function toLogTime(sceneTime: string) {
+  const match = sceneTime.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return sceneTime;
+  const [, rawHour, minute, period] = match;
+  let hour = Number(rawHour) % 12;
+  if (period.toUpperCase() === 'PM') hour += 12;
+  return `${String(hour).padStart(2, '0')}:${minute}`;
+}
 
 const scenes: Record<SceneKey, Scene> = {
   camp: {
@@ -601,11 +650,22 @@ const visualLoads: VisualLoad[] = [
   {
     key: 'lights',
     icon: Lamp,
-    name: { en: 'Main lights', zh: '主灯' },
+    name: { en: 'Lights', zh: '灯' },
     states: {
-      camp: { on: true, value: { en: 'Warm · 65%', zh: '暖光 · 65%' } },
+      camp: { on: true, value: { en: '100%', zh: '100%' } },
       away: { on: false, value: { en: 'Off', zh: '已关闭' } },
-      movie: { on: false, value: { en: 'Off', zh: '已关闭' } },
+      movie: { on: true, value: { en: '35%', zh: '35%' } },
+      sleep: { on: true, value: { en: '15%', zh: '15%' } },
+    },
+  },
+  {
+    key: 'coffee',
+    icon: Coffee,
+    name: { en: 'Coffee maker', zh: '咖啡机' },
+    states: {
+      camp: { on: true, value: { en: 'Brewing', zh: '冲煮中' } },
+      away: { on: false, value: { en: 'Off', zh: '已关闭' } },
+      movie: { on: false, value: { en: 'Ready', zh: '待机' } },
       sleep: { on: false, value: { en: 'Off', zh: '已关闭' } },
     },
   },
@@ -625,10 +685,21 @@ const visualLoads: VisualLoad[] = [
     icon: Tv,
     name: { en: 'Entertainment', zh: '影音系统' },
     states: {
-      camp: { on: false, value: { en: 'Standby', zh: '待机' } },
+      camp: { on: true, value: { en: 'Standard', zh: '标准模式' } },
       away: { on: false, value: { en: 'Off', zh: '已关闭' } },
       movie: { on: true, value: { en: 'Cinema', zh: '影院模式' } },
       sleep: { on: false, value: { en: 'Off', zh: '已关闭' } },
+    },
+  },
+  {
+    key: 'camera',
+    icon: Camera,
+    name: { en: 'Cabin camera', zh: '摄像头' },
+    states: {
+      camp: { on: false, value: { en: 'Privacy off', zh: '隐私关闭' } },
+      away: { on: true, value: { en: 'Guarding', zh: '守护中' } },
+      movie: { on: false, value: { en: 'Privacy off', zh: '隐私关闭' } },
+      sleep: { on: true, value: { en: 'Night guard', zh: '夜间守护' } },
     },
   },
   {
@@ -658,7 +729,7 @@ const visualLoads: VisualLoad[] = [
     icon: Droplets,
     name: { en: 'Humidifier', zh: '加湿器' },
     states: {
-      camp: { on: false, value: { en: 'Standby', zh: '待机' } },
+      camp: { on: true, value: { en: 'Auto · 48%', zh: '自动 · 48%' } },
       away: { on: false, value: { en: 'Off', zh: '已关闭' } },
       movie: { on: false, value: { en: 'Standby', zh: '待机' } },
       sleep: { on: true, value: { en: 'Auto · 48%', zh: '自动 · 48%' } },
@@ -680,7 +751,7 @@ const visualLoads: VisualLoad[] = [
     icon: Volume2,
     name: { en: 'Spatial audio', zh: '空间音响' },
     states: {
-      camp: { on: false, value: { en: 'Standby', zh: '待机' } },
+      camp: { on: true, value: { en: 'Music · 28%', zh: '音乐 · 28%' } },
       away: { on: false, value: { en: 'Off', zh: '已关闭' } },
       movie: { on: true, value: { en: 'Immersive', zh: '沉浸模式' } },
       sleep: { on: false, value: { en: 'Off', zh: '已关闭' } },
@@ -764,7 +835,11 @@ const manualLoadValues: Record<LoadKey, { on: Localized; off: Localized }> = {
     off: { en: 'Powered off', zh: '已关闭' },
   },
   lights: {
-    on: { en: 'Warm · 65%', zh: '暖光 · 65%' },
+    on: { en: '65%', zh: '65%' },
+    off: { en: 'Off', zh: '已关闭' },
+  },
+  coffee: {
+    on: { en: 'Brewing', zh: '冲煮中' },
     off: { en: 'Off', zh: '已关闭' },
   },
   shades: {
@@ -774,6 +849,10 @@ const manualLoadValues: Record<LoadKey, { on: Localized; off: Localized }> = {
   tv: {
     on: { en: 'Cinema', zh: '影院模式' },
     off: { en: 'Off', zh: '已关闭' },
+  },
+  camera: {
+    on: { en: 'Guarding', zh: '守护中' },
+    off: { en: 'Privacy off', zh: '隐私关闭' },
   },
   humidifier: {
     on: { en: 'Auto · 48%', zh: '自动 · 48%' },
@@ -900,7 +979,7 @@ function createSceneControls(scene: SceneKey): DeviceControls {
       climateMode: 'Auto',
       target: 23,
       fan: 'Auto',
-      main: 65,
+      main: 100,
       cct: 3200,
       shade: 100,
       humid: 48,
@@ -944,7 +1023,7 @@ function createSceneControls(scene: SceneKey): DeviceControls {
       climateMode: 'Cool',
       target: 22,
       fan: 'Low',
-      main: 0,
+      main: 35,
       cct: 3000,
       shade: 0,
       humid: 48,
@@ -966,7 +1045,7 @@ function createSceneControls(scene: SceneKey): DeviceControls {
       climateMode: 'Sleep',
       target: 24,
       fan: 'Low',
-      main: 0,
+      main: 15,
       cct: 2700,
       shade: 0,
       humid: 48,
@@ -993,11 +1072,13 @@ function createSceneControls(scene: SceneKey): DeviceControls {
       fan: presets.fan,
     },
     lights: { brightness: presets.main, colorTemperature: presets.cct },
+    coffee: { program: 'Brew' },
     shades: { position: presets.shade },
     tv: {
       source: 'Streaming',
       picture: scene === 'movie' ? 'Cinema' : 'Standard',
     },
+    camera: {},
     humidifier: {
       targetHumidity: presets.humid,
       mode: scene === 'sleep' ? 'Quiet' : 'Auto',
@@ -1033,16 +1114,20 @@ export default function Home() {
   const [pendingScene, setPendingScene] = useState<SceneKey | null>(null);
   const [intrusion, setIntrusion] = useState(false);
   const [loadSheetOpen, setLoadSheetOpen] = useState(false);
+  const [logDialogOpen, setLogDialogOpen] = useState(false);
   const [loadOverrides, setLoadOverrides] = useState<LoadOverrides>({});
   const [selectedLoadKey, setSelectedLoadKey] = useState<LoadKey | null>(null);
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
   const [efficiencyOpen, setEfficiencyOpen] = useState(false);
   const [aiAdviceOpen, setAiAdviceOpen] = useState(false);
   const [efficiencyScene, setEfficiencyScene] = useState<SceneKey>('camp');
+  const [deviceLogs, setDeviceLogs] =
+    useState<DeviceLogEntry[]>(initialDeviceLogs);
   const [deviceControls, setDeviceControls] = useState<DeviceControls>(() =>
     createSceneControls('camp'),
   );
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const deviceLogSequence = useRef(initialDeviceLogs.length + 1);
   const current = scenes[activeScene];
   const activeEnergyInsight = energyInsights[activeScene];
   const selectedEnergyInsight = energyInsights[efficiencyScene];
@@ -1093,8 +1178,8 @@ export default function Home() {
         );
       case 'lights':
         return localized(
-          `${Number(controls.colorTemperature) <= 3300 ? 'Warm' : Number(controls.colorTemperature) >= 5000 ? 'Cool' : 'Neutral'} · ${controls.brightness}%`,
-          `${Number(controls.colorTemperature) <= 3300 ? '暖光' : Number(controls.colorTemperature) >= 5000 ? '冷光' : '中性光'} · ${controls.brightness}%`,
+          `${controls.brightness}%`,
+          `${controls.brightness}%`,
         );
       case 'shades':
         return Number(controls.position) === 100
@@ -1149,16 +1234,32 @@ export default function Home() {
   };
   const getLoadByKey = (key: LoadKey) =>
     getLoadState(visualLoads.find((load) => load.key === key)!);
-  const cabinLoads = visualLoads.filter((load) => load.kind !== 'sensor');
+  const cabinLoadKeys: LoadKey[] = [
+    'climate',
+    'lights',
+    'coffee',
+    'tv',
+    'camera',
+    'humidifier',
+    'audio',
+    'inverter',
+  ];
+  const cabinLoads = visualLoads.filter(
+    (load) => load.kind !== 'sensor' && cabinLoadKeys.includes(load.key),
+  );
   const sensorDevices = visualLoads.filter((load) => load.kind === 'sensor');
-  const activeLoads = visualLoads.filter((load) => getLoadState(load).on);
+  const activeLoads = [...cabinLoads, ...sensorDevices].filter(
+    (load) => getLoadState(load).on,
+  );
   const panelActiveLoads = activeLoads.filter((load) => load.key !== 'climate');
   const climateOn = getLoadByKey('climate').on;
   const mainLightsOn = getLoadByKey('lights').on;
   const ambientOn = getLoadByKey('ambient').on;
   const tvOn = getLoadByKey('tv').on;
+  const cameraOn = getLoadByKey('camera').on;
   const audioOn = getLoadByKey('audio').on;
   const humidifierOn = getLoadByKey('humidifier').on;
+  const coffeeOn = getLoadByKey('coffee').on;
   const inverterOn = getLoadByKey('inverter').on;
   const microwaveOn = getLoadByKey('microwave').on;
   const inductionOn = getLoadByKey('induction').on;
@@ -1180,6 +1281,13 @@ export default function Home() {
   const humidifierMode = String(
     deviceControls.humidifier?.mode ?? 'Auto',
   ).toLowerCase();
+  const mistLevel = !humidifierOn
+    ? 0
+    : humidifierMode === 'boost'
+      ? 0.72
+      : humidifierMode === 'quiet'
+        ? 0.32
+        : 0.28 + humidifierLevel * 0.38;
   const ambientLevel = ambientOn
     ? Number(deviceControls.ambient?.brightness ?? 35) / 100
     : 0;
@@ -1194,6 +1302,10 @@ export default function Home() {
     ? Number(deviceControls.induction?.power ?? 600)
     : 0;
   const shadePosition = Number(deviceControls.shades?.position ?? 100);
+  const shadeClosedLevel = Math.max(
+    0,
+    Math.min(1, (75 - shadePosition) / 65),
+  );
   const climateVisualState = !climateOn
     ? 'off'
     : climateFan === 'high'
@@ -1201,6 +1313,13 @@ export default function Home() {
       : climateFan === 'low' || climateMode === 'sleep'
         ? 'low'
         : 'medium';
+  const airflowLevel = !climateOn
+    ? 0
+    : climateFan === 'high'
+      ? 1
+      : climateFan === 'low' || climateMode === 'sleep'
+        ? 0.6
+        : 0.84;
   const lightVisualState = !mainLightsOn
     ? 'off'
     : mainLightTemperature <= 3300
@@ -1212,8 +1331,16 @@ export default function Home() {
     ? `/assets/rv-cabin-main-light-${lightVisualState}-v2.webp`
     : '/assets/rv-cabin-empty-loads.webp';
   const sceneLightingStyle = {
+    '--scene-light-level': mainLightLevel,
+    '--scene-vignette-opacity': Math.max(
+      0,
+      0.94 - mainLightLevel * 0.94,
+    ),
     '--sleep-scene-brightness': 0.38 + mainLightLevel * 0.5,
-    '--sleep-scene-sheen-opacity': 0.72 - mainLightLevel * 0.44,
+    '--sleep-scene-sheen-opacity': Math.max(
+      0,
+      0.74 - mainLightLevel * 0.74,
+    ),
   } as CSSProperties;
   const shadeVisualState =
     shadePosition <= 10
@@ -1349,15 +1476,265 @@ export default function Home() {
     },
     [],
   );
-  const sceneStatus = intrusion
-    ? locale === 'en'
-      ? 'Person detected at RV entrance'
-      : '房车入口检测到人员'
-    : pick(current.ready);
+  function addDeviceLog(
+    sourceKey: string,
+    device: Localized,
+    detail: Localized,
+    sceneTime = current.time,
+    actions?: DeviceLogAction[],
+  ) {
+    const entry: DeviceLogEntry = {
+      id: deviceLogSequence.current++,
+      sourceKey,
+      device,
+      detail,
+      time: toLogTime(sceneTime),
+      actions,
+    };
+    setDeviceLogs((previous) => {
+      if (!actions?.length && previous[0]?.sourceKey === sourceKey) {
+        return [entry, ...previous.slice(1)];
+      }
+      return [entry, ...previous];
+    });
+  }
+
+  function describeSceneAction(
+    load: VisualLoad,
+    scene: SceneKey,
+    controls: Record<string, ControlValue>,
+  ): Localized {
+    const targetState = load.states[scene];
+    if (load.key === 'climate') {
+      return targetState.on
+        ? {
+            en: `Set to ${controlTextFor(String(controls.mode), 'en')} · ${controls.target}°C · ${controlTextFor(String(controls.fan), 'en')} fan`,
+            zh: `切换至${controlTextFor(String(controls.mode), 'zh')}模式 · ${controls.target}°C · ${controlTextFor(String(controls.fan), 'zh')}风`,
+          }
+        : { en: 'Turned off', zh: '关闭空调' };
+    }
+    if (load.key === 'lights') {
+      return targetState.on
+        ? {
+            en: `Brightness ${controls.brightness}% · ${controls.colorTemperature} K`,
+            zh: `亮度调至${controls.brightness}% · 色温${controls.colorTemperature}K`,
+          }
+        : { en: 'Turned off', zh: '关闭灯光' };
+    }
+    if (load.key === 'coffee') {
+      return targetState.on
+        ? { en: 'Started brewing', zh: '开始冲煮' }
+        : {
+            en: `Set to ${targetState.value.en.toLowerCase()}`,
+            zh: `切换至${targetState.value.zh}`,
+          };
+    }
+    if (load.key === 'shades') {
+      const position = Number(controls.position);
+      return position === 0
+        ? { en: 'Fully closed', zh: '全部关闭' }
+        : position === 100
+          ? { en: 'Fully opened', zh: '全部打开' }
+          : {
+              en: `Opened to ${position}%`,
+              zh: `开启至${position}%`,
+            };
+    }
+    if (load.key === 'tv') {
+      return targetState.on
+        ? {
+            en: `Turned on · ${controlTextFor(String(controls.picture), 'en')} picture · ${controlTextFor(String(controls.source), 'en')}`,
+            zh: `开启 · ${controlTextFor(String(controls.picture), 'zh')}画面 · ${controlTextFor(String(controls.source), 'zh')}`,
+          }
+        : { en: 'Turned off', zh: '关闭影音系统' };
+    }
+    if (load.key === 'camera') {
+      return targetState.on
+        ? scene === 'sleep'
+          ? { en: 'Night Guard enabled', zh: '开启夜间守护' }
+          : { en: 'Sentinel mode enabled', zh: '开启哨兵模式' }
+        : {
+            en: 'Sentinel mode off · Privacy mode',
+            zh: '关闭哨兵模式 · 进入隐私模式',
+          };
+    }
+    if (load.key === 'microwave') {
+      return controls.safetyLock === true
+        ? {
+            en: 'Heating stopped · Safety lock enabled',
+            zh: '停止加热 · 开启安全锁',
+          }
+        : {
+            en: `${controlTextFor(String(controls.program), 'en')} preset ready · Manual start required`,
+            zh: `${controlTextFor(String(controls.program), 'zh')}预设就绪 · 等待手动启动`,
+          };
+    }
+    if (load.key === 'induction') {
+      return controls.childLock === true
+        ? {
+            en: 'Heating stopped · Child lock enabled',
+            zh: '停止加热 · 开启童锁',
+          }
+        : {
+            en: `${controlTextFor(String(controls.mode), 'en')} preset ready · Manual start required`,
+            zh: `${controlTextFor(String(controls.mode), 'zh')}预设就绪 · 等待手动启动`,
+          };
+    }
+    if (load.key === 'humidifier') {
+      return targetState.on
+        ? {
+            en: `${controlTextFor(String(controls.mode), 'en')} · Target ${controls.targetHumidity}%`,
+            zh: `${controlTextFor(String(controls.mode), 'zh')}模式 · 目标湿度${controls.targetHumidity}%`,
+          }
+        : { en: 'Turned off', zh: '关闭加湿器' };
+    }
+    if (load.key === 'audio') {
+      return targetState.on
+        ? {
+            en: `${controlTextFor(String(controls.profile), 'en')} · Volume ${controls.volume}%`,
+            zh: `${controlTextFor(String(controls.profile), 'zh')}模式 · 音量${controls.volume}%`,
+          }
+        : { en: 'Muted and turned off', zh: '静音并关闭' };
+    }
+    if (load.key === 'inverter') {
+      return targetState.on
+        ? {
+            en: `${controlTextFor(String(controls.mode), 'en')} mode · ${controls.outputLimit} W limit`,
+            zh: `切换至${controlTextFor(String(controls.mode), 'zh')}模式 · 输出上限${controls.outputLimit}W`,
+          }
+        : { en: 'Turned off', zh: '关闭逆变器' };
+    }
+    if (load.key === 'lock') {
+      return targetState.on
+        ? scene === 'sleep'
+          ? { en: 'Night lock enabled', zh: '启用夜间上锁' }
+          : { en: 'Locked', zh: '上锁' }
+        : { en: 'Unlocked', zh: '解锁' };
+    }
+    return targetState.value;
+  }
+
+  function getSceneDeviceActions(scene: SceneKey): DeviceLogAction[] {
+    const targetControls = createSceneControls(scene);
+    const loggedLoadKeys: LoadKey[] = [
+      'climate',
+      'lights',
+      'coffee',
+      'shades',
+      'tv',
+      'camera',
+      'microwave',
+      'induction',
+      'humidifier',
+      'audio',
+      'inverter',
+      'lock',
+    ];
+
+    return visualLoads
+      .filter((load) => loggedLoadKeys.includes(load.key))
+      .filter((load) => {
+        const currentState = getLoadState(load);
+        const targetState = load.states[scene];
+        const currentControls = deviceControls[load.key] ?? {};
+        const nextControls = targetControls[load.key] ?? {};
+        return (
+          currentState.on !== targetState.on ||
+          JSON.stringify(currentControls) !== JSON.stringify(nextControls)
+        );
+      })
+      .map((load) => ({
+        device: load.name,
+        detail: describeSceneAction(
+          load,
+          scene,
+          targetControls[load.key] ?? {},
+        ),
+      }));
+  }
+
+  function describeControlChange(
+    field: string,
+    value: ControlValue,
+  ): Localized {
+    const labels: Record<string, Localized> = {
+      brightness: { en: 'Brightness', zh: '亮度' },
+      colorTemperature: { en: 'Color temperature', zh: '色温' },
+      mode: { en: 'Mode', zh: '模式' },
+      target: { en: 'Temperature', zh: '温度' },
+      fan: { en: 'Fan', zh: '风速' },
+      position: { en: 'Open position', zh: '开合度' },
+      targetHumidity: { en: 'Target humidity', zh: '目标湿度' },
+      volume: { en: 'Volume', zh: '音量' },
+      profile: { en: 'Sound profile', zh: '声音模式' },
+      source: { en: 'Source', zh: '信号源' },
+      picture: { en: 'Picture mode', zh: '画面模式' },
+      program: { en: 'Program', zh: '程序' },
+      power: { en: 'Power', zh: '功率' },
+      timer: { en: 'Timer', zh: '定时' },
+      outputLimit: { en: 'Output limit', zh: '输出上限' },
+      color: { en: 'Color', zh: '颜色' },
+      autoLock: { en: 'Auto lock', zh: '自动上锁' },
+      childLock: { en: 'Child lock', zh: '童锁' },
+      safetyLock: { en: 'Safety lock', zh: '安全锁' },
+    };
+    const label = labels[field] ?? { en: 'Setting', zh: '设置' };
+    const unit =
+      field === 'brightness' ||
+      field === 'position' ||
+      field === 'targetHumidity' ||
+      field === 'volume'
+        ? '%'
+        : field === 'target'
+          ? '°C'
+          : field === 'colorTemperature'
+            ? 'K'
+            : field === 'power' || field === 'outputLimit'
+              ? 'W'
+              : '';
+    const displayValue =
+      typeof value === 'boolean'
+        ? {
+            en: value ? 'On' : 'Off',
+            zh: value ? '开启' : '关闭',
+          }
+        : typeof value === 'string'
+          ? {
+              en: `${controlTextFor(value, 'en')}${unit}`,
+              zh: `${controlTextFor(value, 'zh')}${unit}`,
+            }
+        : { en: `${value}${unit}`, zh: `${value}${unit}` };
+    return {
+      en: `${label.en} · ${displayValue.en}`,
+      zh: `${label.zh} · ${displayValue.zh}`,
+    };
+  }
+
+  function describePowerChange(load: VisualLoad, on: boolean): Localized {
+    if (load.key === 'camera') {
+      return on
+        ? { en: 'Sentinel mode on', zh: '哨兵模式已开启' }
+        : { en: 'Privacy mode', zh: '哨兵模式已关闭' };
+    }
+    if (load.key === 'lock') {
+      return on
+        ? { en: 'Locked', zh: '已上锁' }
+        : { en: 'Unlocked', zh: '已解锁' };
+    }
+    if (load.key === 'shades') {
+      return on
+        ? { en: 'Opened', zh: '已打开' }
+        : { en: 'Closed', zh: '已关闭' };
+    }
+    return on
+      ? { en: 'Turned on', zh: '已开启' }
+      : { en: 'Turned off', zh: '已关闭' };
+  }
 
   function activateScene(key: SceneKey) {
     if (key === activeScene && !pendingScene) return;
     if (timer.current) clearTimeout(timer.current);
+    const sceneActions = getSceneDeviceActions(key);
     setLoadOverrides({});
     setDeviceControls(createSceneControls(key));
     setLoadSheetOpen(false);
@@ -1369,6 +1746,19 @@ export default function Home() {
     timer.current = setTimeout(() => {
       setActiveScene(key);
       setPendingScene(null);
+      addDeviceLog(
+        `scene-mode-${key}`,
+        {
+          en: `${scenes[key].name.en} scene`,
+          zh: `${scenes[key].name.zh}场景`,
+        },
+        {
+          en: `${sceneActions.length} device actions completed`,
+          zh: `已执行${sceneActions.length}项设备联动`,
+        },
+        scenes[key].time,
+        sceneActions,
+      );
     }, 980);
   }
 
@@ -1388,6 +1778,11 @@ export default function Home() {
     setEfficiencyOpen(false);
     setAiAdviceOpen(false);
     setEfficiencyScene(activeScene);
+    addDeviceLog(
+      'system-reset',
+      { en: 'System', zh: '系统' },
+      { en: 'Scene defaults restored', zh: '已恢复场景初始设置' },
+    );
   }
 
   function toggleLoad(load: VisualLoad) {
@@ -1433,9 +1828,22 @@ export default function Home() {
       ...previous,
       [activeScene]: { ...previous[activeScene], [load.key]: next },
     }));
+    addDeviceLog(
+      `power-${load.key}`,
+      load.name,
+      describePowerChange(load, next),
+    );
+    if (load.key === 'camera' && !next) {
+      setIntrusion(false);
+      setSelectedCameraId(null);
+    }
   }
 
-  function setLoadPower(load: VisualLoad, on: boolean) {
+  function setLoadPower(
+    load: VisualLoad,
+    on: boolean,
+    recordLog = true,
+  ) {
     if (load.kind === 'sensor') return;
     if (
       load.key === 'microwave' &&
@@ -1453,6 +1861,17 @@ export default function Home() {
       ...previous,
       [activeScene]: { ...previous[activeScene], [load.key]: on },
     }));
+    if (recordLog) {
+      addDeviceLog(
+        `power-${load.key}`,
+        load.name,
+        describePowerChange(load, on),
+      );
+    }
+    if (load.key === 'camera' && !on) {
+      setIntrusion(false);
+      setSelectedCameraId(null);
+    }
   }
 
   function updateDeviceControl(
@@ -1464,10 +1883,18 @@ export default function Home() {
       ...previous,
       [key]: { ...previous[key], [field]: value },
     }));
+    const changedLoad = visualLoads.find((item) => item.key === key);
+    if (changedLoad) {
+      addDeviceLog(
+        `control-${key}-${field}`,
+        changedLoad.name,
+        describeControlChange(field, value),
+      );
+    }
     if (key === 'shades' && field === 'position') {
       const opened = Number(value) > 0;
       const load = visualLoads.find((item) => item.key === key)!;
-      setLoadPower(load, opened);
+      setLoadPower(load, opened, false);
     }
     if (key === 'induction' && field === 'childLock' && Boolean(value)) {
       const load = visualLoads.find((item) => item.key === key)!;
@@ -1488,7 +1915,7 @@ export default function Home() {
     <>
       <Sheet open={loadSheetOpen} onOpenChange={handleSheetOpenChange}>
         <main
-          className={`app-shell scene-${activeScene} ${intrusion ? 'is-alert' : ''}`}
+          className={`app-shell scene-${activeScene} ${cameraOn && intrusion ? 'is-alert' : ''}`}
           style={sceneLightingStyle}
         >
           <header className="topbar">
@@ -1737,67 +2164,230 @@ export default function Home() {
               </aside>
 
               <section className="hero-panel">
-                <div className="hero-scene-canvas">
+                <div className="hero-scene-bleed" aria-hidden="true">
                   <Image
-                    src={heroCabinImage}
-                    alt={
-                      locale === 'en'
-                        ? 'Cutaway smart RV cabin equipped with climate, lighting, entertainment, kitchen, humidity and power devices'
-                        : '配备空调、照明、影音、厨电、加湿和供电设备的智能房车剖面实景'
-                    }
-                    className="hero-image"
+                    src="/assets/rv-designer/cabin-light-off.jpg"
+                    alt=""
+                    className="hero-scene-bleed-image hero-scene-bleed-off"
                     fill
                     priority
                     unoptimized
                     sizes="(max-width: 1040px) 50vw, 68vw"
                   />
-                  <div className="device-visual-layer" aria-hidden="true">
-                    {(
-                      Object.keys(deviceStateAssets) as DeviceVisualKey[]
-                    ).flatMap((deviceKey) => {
-                      const state = visualStateByDevice[deviceKey];
-                      const parts =
-                        deviceKey === 'ambient'
-                          ? (['upper', 'lower'] as const)
-                          : ([null] as const);
-
-                      return parts.map((part) => (
+                  <Image
+                    src="/assets/rv-designer/cabin-light-on.jpg"
+                    alt=""
+                    className="hero-scene-bleed-image hero-scene-bleed-on"
+                    fill
+                    priority
+                    unoptimized
+                    sizes="(max-width: 1040px) 50vw, 68vw"
+                    style={{ opacity: mainLightLevel }}
+                  />
+                </div>
+                <div className="hero-scene-canvas">
+                  <Image
+                    src="/assets/rv-designer/cabin-light-off.jpg"
+                    alt={
+                      locale === 'en'
+                        ? 'Cutaway smart RV cabin with independently controlled physical appliances'
+                        : '配备独立可控实物设备的智能房车剖面实景'
+                    }
+                    className="hero-image hero-image-light-off"
+                    fill
+                    priority
+                    unoptimized
+                    sizes="(max-width: 1040px) 50vw, 68vw"
+                  />
+                  <Image
+                    src="/assets/rv-designer/cabin-light-on.jpg"
+                    alt=""
+                    className="hero-image hero-image-light-on"
+                    fill
+                    priority
+                    unoptimized
+                    sizes="(max-width: 1040px) 50vw, 68vw"
+                    style={{ opacity: mainLightLevel }}
+                  />
+                  <div
+                    className="rv-light-wash"
+                    style={
+                      {
+                        '--light-level': mainLightLevel,
+                      } as CSSProperties
+                    }
+                    aria-hidden="true"
+                  />
+                  <div className="designer-shade-layer" aria-hidden="true">
+                    <Image
+                      src="/assets/rv-designer/shades-closed-off.png"
+                      alt=""
+                      className="designer-shade-image"
+                      fill
+                      sizes="(max-width: 1040px) 50vw, 68vw"
+                      unoptimized
+                      style={{
+                        opacity: shadeClosedLevel * (1 - mainLightLevel),
+                      }}
+                    />
+                    <Image
+                      src="/assets/rv-designer/shades-closed-on.png"
+                      alt=""
+                      className="designer-shade-image"
+                      fill
+                      sizes="(max-width: 1040px) 50vw, 68vw"
+                      unoptimized
+                      style={{ opacity: shadeClosedLevel * mainLightLevel }}
+                    />
+                  </div>
+                  <div
+                    className="designer-device-layer"
+                    style={
+                      {
+                        '--device-light-level': mainLightLevel,
+                      } as CSSProperties
+                    }
+                    aria-hidden="true"
+                  >
+                    <span className="designer-device designer-device-climate">
+                      {climateOn && airflowLevel > 0 && (
                         <span
-                          key={`${deviceKey}-${state}-${part ?? 'whole'}`}
-                          className={`device-visual device-visual-${deviceKey} ${part ? `device-visual-${deviceKey}-${part}` : ''} state-${state} is-active`}
+                          className="designer-airflow"
                           style={
                             {
-                              '--device-level': visualLevelByDevice[deviceKey],
+                              '--airflow-level': airflowLevel,
                             } as CSSProperties
                           }
                         >
                           <Image
-                            src={deviceStateAssetPath(deviceKey, state, part)}
+                            src="/assets/rv-designer/airflow.png"
                             alt=""
-                            className="device-state-image"
                             fill
-                            sizes="30vw"
+                            sizes="10vw"
                             unoptimized
                           />
-                          {deviceKey === 'climate' && state !== 'off' && (
-                            <span className="climate-airflow-extension">
-                              <Image
-                                src={deviceStateAssetPath(deviceKey, state, part)}
-                                alt=""
-                                className="climate-airflow-extension-image"
-                                fill
-                                sizes="20vw"
-                                unoptimized
-                              />
-                            </span>
-                          )}
+                          <Image
+                            src="/assets/rv-designer/airflow.png"
+                            alt=""
+                            fill
+                            sizes="10vw"
+                            unoptimized
+                          />
+                          <Image
+                            src="/assets/rv-designer/airflow.png"
+                            alt=""
+                            fill
+                            sizes="10vw"
+                            unoptimized
+                          />
                         </span>
-                      ));
-                    })}
+                      )}
+                      <Image
+                        src={`/assets/rv-designer/climate-${climateOn ? 'on' : 'off'}.png`}
+                        alt=""
+                        fill
+                        sizes="18vw"
+                        unoptimized
+                      />
+                    </span>
+                    <span className="designer-device designer-device-audio">
+                      <Image
+                        src={`/assets/rv-designer/audio-${audioOn ? 'on' : 'off'}.png`}
+                        alt=""
+                        fill
+                        sizes="8vw"
+                        unoptimized
+                      />
+                    </span>
+                    <span className="designer-device designer-device-coffee">
+                      <Image
+                        src={`/assets/rv-designer/coffee-${coffeeOn ? 'on' : 'off'}.png`}
+                        alt=""
+                        fill
+                        sizes="8vw"
+                        unoptimized
+                      />
+                    </span>
+                    {!tvOn && (
+                      <span className="designer-device designer-device-tv">
+                        <Image
+                          src="/assets/rv-designer/tv-off.png"
+                          alt=""
+                          fill
+                          sizes="8vw"
+                          unoptimized
+                        />
+                      </span>
+                    )}
+                    <span className="designer-device designer-device-camera">
+                      <Image
+                        src={`/assets/rv-designer/camera-${cameraOn ? 'on' : 'off'}.png`}
+                        alt=""
+                        fill
+                        sizes="8vw"
+                        unoptimized
+                      />
+                    </span>
+                    <span className="designer-device designer-device-computer">
+                      <Image
+                        src="/assets/rv-designer/computer.png"
+                        alt=""
+                        fill
+                        sizes="8vw"
+                        unoptimized
+                      />
+                    </span>
+                    <span className="designer-device designer-device-humidifier">
+                      {humidifierOn && mistLevel > 0 && (
+                        <span
+                          className="designer-humidifier-mist"
+                          style={
+                            {
+                              '--mist-level': mistLevel,
+                            } as CSSProperties
+                          }
+                        >
+                          <Image
+                            src="/assets/rv-designer/humidifier-mist.png"
+                            alt=""
+                            fill
+                            sizes="5vw"
+                            unoptimized
+                          />
+                          <Image
+                            src="/assets/rv-designer/humidifier-mist.png"
+                            alt=""
+                            fill
+                            sizes="5vw"
+                            unoptimized
+                          />
+                        </span>
+                      )}
+                      <Image
+                        src={`/assets/rv-designer/humidifier-${humidifierOn ? 'on' : 'off'}.png`}
+                        alt=""
+                        fill
+                        sizes="6vw"
+                        unoptimized
+                      />
+                    </span>
                   </div>
                 </div>
                 <div className="hero-vignette" aria-hidden="true" />
                 <div className="hero-sheen" aria-hidden="true" />
+                {tvOn && (
+                  <div className="hero-scene-foreground" aria-hidden="true">
+                    <span className="designer-device designer-device-tv designer-device-tv-luminous">
+                      <Image
+                        src="/assets/rv-designer/tv-on.png"
+                        alt=""
+                        fill
+                        sizes="8vw"
+                        unoptimized
+                      />
+                    </span>
+                  </div>
+                )}
                 <div className="scene-story">
                   <div className="scene-story-meta">
                     <span className="eyebrow">
@@ -1871,30 +2461,51 @@ export default function Home() {
                     );
                   })}
                 </fieldset>
-                <div className="automation-card">
-                  <div className="automation-icon">
-                    <Sparkles aria-hidden="true" />
+                <div className="device-log-card">
+                  <div className="device-log-icon">
+                    <History aria-hidden="true" />
                   </div>
-                  <div className="automation-copy">
+                  <div className="device-log-heading">
                     <small>
                       {locale === 'en'
-                        ? 'RENOGY AI AUTOMATION'
-                        : 'RENOGY AI 自动化'}
+                        ? 'DEVICE ACTIVITY'
+                        : '设备动态'}
                     </small>
-                    <strong>{sceneStatus}</strong>
+                    <strong>
+                      {locale === 'en'
+                        ? 'Device status log'
+                        : '设备状态变更日志'}
+                    </strong>
                   </div>
-                  <div className="automation-steps">
-                    {current.steps.map((step) => (
-                      <span key={step.en}>
-                        <Check aria-hidden="true" /> {pick(step)}
-                      </span>
+                  <ol
+                    className="device-log-list"
+                    aria-live="polite"
+                    aria-label={
+                      locale === 'en'
+                        ? 'Recent device status changes'
+                        : '最近设备状态变更'
+                    }
+                  >
+                    {deviceLogs.slice(0, 3).map((entry, index) => (
+                      <li
+                        className={index === 0 ? 'is-latest' : ''}
+                        key={entry.id}
+                      >
+                        <time>{entry.time}</time>
+                        <span>
+                          <strong>{pick(entry.device)}</strong>
+                          <small>{pick(entry.detail)}</small>
+                        </span>
+                      </li>
                     ))}
-                  </div>
+                  </ol>
                   <button
                     className="load-sheet-trigger"
-                    onClick={() => setLoadSheetOpen(true)}
+                    onClick={() => setLogDialogOpen(true)}
                   >
-                    <span>{locale === 'en' ? 'All devices' : '全部设备'}</span>
+                    <span>
+                      {locale === 'en' ? 'All logs' : '全部日志信息'}
+                    </span>
                     <ChevronRight aria-hidden="true" />
                   </button>
                 </div>
@@ -1922,7 +2533,7 @@ export default function Home() {
                 <div className="panel-heading">
                   <div>
                     <span className="eyebrow">
-                      {current.security
+                      {cameraOn
                         ? locale === 'en'
                           ? '360° SENTINEL'
                           : '360° 哨兵守护'
@@ -1931,7 +2542,7 @@ export default function Home() {
                           : '智能生活'}
                     </span>
                     <h2>
-                      {current.security
+                      {cameraOn
                         ? locale === 'en'
                           ? 'Security'
                           : '安防'
@@ -1940,7 +2551,7 @@ export default function Home() {
                           : '舱内系统'}
                     </h2>
                   </div>
-                  {current.security ? (
+                  {cameraOn ? (
                     <ShieldCheck
                       className="panel-title-icon"
                       aria-hidden="true"
@@ -1949,7 +2560,7 @@ export default function Home() {
                     <Armchair className="panel-title-icon" aria-hidden="true" />
                   )}
                 </div>
-                {current.security ? (
+                {cameraOn ? (
                   <>
                     <figure
                       className="sentry-camera-wall"
@@ -2130,8 +2741,8 @@ export default function Home() {
                       <Power aria-hidden="true" />
                       <span>
                         {locale === 'en'
-                          ? `View all ${visualLoads.length} devices`
-                          : `查看全部${visualLoads.length}项设备`}
+                          ? `View all ${cabinLoads.length + sensorDevices.length} devices`
+                          : `查看全部${cabinLoads.length + sensorDevices.length}项设备`}
                       </span>
                       <ChevronRight aria-hidden="true" />
                     </button>
@@ -2221,8 +2832,8 @@ export default function Home() {
                       <Power aria-hidden="true" />
                       <span>
                         {locale === 'en'
-                          ? `View all ${visualLoads.length} devices`
-                          : `查看全部${visualLoads.length}项设备`}
+                          ? `View all ${cabinLoads.length + sensorDevices.length} devices`
+                          : `查看全部${cabinLoads.length + sensorDevices.length}项设备`}
                       </span>
                       <ChevronRight aria-hidden="true" />
                     </button>
@@ -2447,7 +3058,7 @@ export default function Home() {
                     : '全部房车设备控制'
                 }
               >
-                {visualLoads.map((load) => {
+                {[...cabinLoads, ...sensorDevices].map((load) => {
                   const LoadIcon = load.icon;
                   const state = getLoadState(load);
                   const quickControlLocked =
@@ -2530,6 +3141,76 @@ export default function Home() {
           </SheetContent>
         </main>
       </Sheet>
+      <Dialog open={logDialogOpen} onOpenChange={setLogDialogOpen}>
+        <DialogContent className="device-log-dialog" showCloseButton={false}>
+          <DialogHeader className="device-log-dialog-header">
+            <div>
+              <span className="eyebrow">
+                {locale === 'en' ? 'DEVICE ACTIVITY' : '设备动态'}
+              </span>
+              <DialogTitle>
+                {locale === 'en'
+                  ? 'Complete device status log'
+                  : '全部设备状态变更日志'}
+              </DialogTitle>
+              <DialogDescription>
+                {locale === 'en'
+                  ? `${deviceLogs.length} changes recorded in this demo session, newest first.`
+                  : `本次演示已记录${deviceLogs.length}条状态变化，按最新时间排列。`}
+              </DialogDescription>
+            </div>
+            <DialogClose
+              className="device-log-dialog-close"
+              aria-label={locale === 'en' ? 'Close logs' : '关闭日志'}
+            >
+              <X aria-hidden="true" />
+            </DialogClose>
+          </DialogHeader>
+          <ol
+            className="device-log-history"
+            aria-label={
+              locale === 'en'
+                ? 'Complete device status history'
+                : '完整设备状态变更记录'
+            }
+          >
+            {deviceLogs.map((entry, index) => (
+              <li
+                className={`${index === 0 ? 'is-latest' : ''} ${entry.actions?.length ? 'is-scene-event' : ''}`}
+                key={entry.id}
+              >
+                <time>{entry.time}</time>
+                <span className="device-log-history-copy">
+                  <strong>{pick(entry.device)}</strong>
+                  <small>{pick(entry.detail)}</small>
+                </span>
+                {index === 0 && (
+                  <span className="device-log-latest-badge">
+                    {locale === 'en' ? 'LATEST' : '最新'}
+                  </span>
+                )}
+                {entry.actions?.length ? (
+                  <ul
+                    className="scene-log-actions"
+                    aria-label={
+                      locale === 'en'
+                        ? `${pick(entry.device)} device actions`
+                        : `${pick(entry.device)}设备联动明细`
+                    }
+                  >
+                    {entry.actions.map((action, actionIndex) => (
+                      <li key={`${entry.id}-${actionIndex}`}>
+                        <strong>{pick(action.device)}</strong>
+                        <span>{pick(action.detail)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </li>
+            ))}
+          </ol>
+        </DialogContent>
+      </Dialog>
       <Dialog open={efficiencyOpen} onOpenChange={setEfficiencyOpen}>
         <DialogContent className="efficiency-dialog" showCloseButton={false}>
           <DialogHeader className="efficiency-dialog-header">
@@ -3059,26 +3740,14 @@ function DeviceControlPanel({
         );
       case 'lights':
         return (
-          <>
-            <RangeControl
-              label={t('Brightness', '亮度')}
-              value={numberValue('brightness', 65)}
-              min={1}
-              max={100}
-              unit="%"
-              onChange={(value) => onUpdate('brightness', value)}
-            />
-            <RangeControl
-              label={t('Color temperature', '色温')}
-              value={numberValue('colorTemperature', 3200)}
-              min={2700}
-              max={6500}
-              step={100}
-              unit="K"
-              onChange={(value) => onUpdate('colorTemperature', value)}
-              gradient="temperature"
-            />
-          </>
+          <RangeControl
+            label={t('Brightness', '亮度')}
+            value={numberValue('brightness', 65)}
+            min={1}
+            max={100}
+            unit="%"
+            onChange={(value) => onUpdate('brightness', value)}
+          />
         );
       case 'shades':
         return (
