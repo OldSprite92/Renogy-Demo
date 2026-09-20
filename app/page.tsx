@@ -72,6 +72,7 @@ import { Switch } from '@/components/ui/switch';
 
 type Locale = 'en' | 'zh';
 type SceneKey = 'camp' | 'away' | 'movie' | 'sleep';
+type SecurityView = 'exterior' | 'interior';
 type IconName =
   | 'lamp'
   | 'climate'
@@ -164,28 +165,42 @@ const sentryCameras = [
   {
     id: '01',
     position: 'front',
-    label: { en: 'Front approach', zh: '车头前方' },
+    scope: 'exterior',
+    label: { en: 'Front', zh: '车头' },
     detectsIntrusion: false,
   },
   {
     id: '02',
     position: 'entry',
-    label: { en: 'Entry side', zh: '车门侧' },
+    scope: 'exterior',
+    label: { en: 'Rear', zh: '车尾' },
     detectsIntrusion: true,
   },
   {
     id: '03',
     position: 'rear',
-    label: { en: 'Rear perimeter', zh: '车尾后方' },
+    scope: 'exterior',
+    label: { en: 'Left side', zh: '左侧' },
     detectsIntrusion: false,
   },
   {
     id: '04',
     position: 'camp',
-    label: { en: 'Camp side', zh: '营地侧' },
+    scope: 'exterior',
+    label: { en: 'Right side', zh: '右侧' },
     detectsIntrusion: false,
   },
 ] as const;
+
+const indoorCamera = {
+  id: '05',
+  position: 'interior',
+  scope: 'interior',
+  label: { en: 'Cabin overview', zh: '车内全景' },
+  detectsIntrusion: false,
+} as const;
+
+const securityCameras = [...sentryCameras, indoorCamera] as const;
 
 const initialDeviceLogs: DeviceLogEntry[] = [
   {
@@ -1118,6 +1133,8 @@ export default function Home() {
   const [loadOverrides, setLoadOverrides] = useState<LoadOverrides>({});
   const [selectedLoadKey, setSelectedLoadKey] = useState<LoadKey | null>(null);
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
+  const [securityView, setSecurityView] =
+    useState<SecurityView>('exterior');
   const [efficiencyOpen, setEfficiencyOpen] = useState(false);
   const [aiAdviceOpen, setAiAdviceOpen] = useState(false);
   const [efficiencyScene, setEfficiencyScene] = useState<SceneKey>('camp');
@@ -1275,6 +1292,15 @@ export default function Home() {
   const mainLightTemperature = Number(
     deviceControls.lights?.colorTemperature ?? 3200,
   );
+  const interiorCameraLightingStyle = {
+    '--camera-feed-light-level': mainLightLevel,
+    '--camera-feed-light-color':
+      mainLightTemperature <= 3300
+        ? 'rgba(255, 185, 112, 0.26)'
+        : mainLightTemperature >= 5000
+          ? 'rgba(150, 211, 255, 0.18)'
+          : 'rgba(238, 224, 190, 0.2)',
+  } as CSSProperties;
   const humidifierLevel = humidifierOn
     ? Number(deviceControls.humidifier?.targetHumidity ?? 48) / 100
     : 0;
@@ -1467,7 +1493,8 @@ export default function Home() {
     ? (visualLoads.find((load) => load.key === selectedLoadKey) ?? null)
     : null;
   const selectedCamera = selectedCameraId
-    ? (sentryCameras.find((camera) => camera.id === selectedCameraId) ?? null)
+    ? (securityCameras.find((camera) => camera.id === selectedCameraId) ??
+      null)
     : null;
 
   useEffect(
@@ -1741,6 +1768,7 @@ export default function Home() {
     setAiAdviceOpen(false);
     setSelectedLoadKey(null);
     setSelectedCameraId(null);
+    setSecurityView('exterior');
     setIntrusion(false);
     setPendingScene(key);
     timer.current = setTimeout(() => {
@@ -1774,6 +1802,7 @@ export default function Home() {
     setDeviceControls(createSceneControls(activeScene));
     setSelectedLoadKey(null);
     setSelectedCameraId(null);
+    setSecurityView('exterior');
     setLoadSheetOpen(false);
     setEfficiencyOpen(false);
     setAiAdviceOpen(false);
@@ -1836,6 +1865,7 @@ export default function Home() {
     if (load.key === 'camera' && !next) {
       setIntrusion(false);
       setSelectedCameraId(null);
+      setSecurityView('exterior');
     }
   }
 
@@ -1871,6 +1901,7 @@ export default function Home() {
     if (load.key === 'camera' && !on) {
       setIntrusion(false);
       setSelectedCameraId(null);
+      setSecurityView('exterior');
     }
   }
 
@@ -2562,81 +2593,173 @@ export default function Home() {
                 </div>
                 {cameraOn ? (
                   <>
-                    <figure
-                      className="sentry-camera-wall"
+                    <div
+                      className="sentry-view-switch"
+                      role="tablist"
                       aria-label={
                         locale === 'en'
-                          ? 'Four live cameras providing complete perimeter coverage'
-                          : '四路实时摄像头，全方位覆盖房车周界'
+                          ? 'Security camera area'
+                          : '安防摄像头区域'
                       }
                     >
-                      {sentryCameras.map((camera) => {
-                        const cameraAlert =
-                          intrusion && camera.detectsIntrusion;
-                        return (
-                          <button
-                            className={`sentry-camera camera-${camera.position} ${cameraAlert ? 'is-alert' : ''}`}
-                            type="button"
-                            key={camera.id}
-                            onClick={() => setSelectedCameraId(camera.id)}
-                            aria-label={`${locale === 'en' ? camera.label.en : camera.label.zh} · ${locale === 'en' ? 'Open enlarged live camera view' : '打开实时监控大画面'}`}
-                          >
-                            <Image
-                              className="sentry-camera-image"
-                              src="/assets/sentry-cameras.png"
-                              width={1024}
-                              height={682}
-                              sizes="150px"
-                              alt=""
-                            />
-                            <div
-                              className="camera-overlay"
-                              aria-hidden="true"
-                            />
-                            <div className="sentry-camera-topline">
-                              <span
-                                className={
-                                  cameraAlert
-                                    ? 'sentry-live is-alert'
-                                    : 'sentry-live'
-                                }
-                              >
-                                <Radio aria-hidden="true" />{' '}
-                                {cameraAlert
-                                  ? locale === 'en'
-                                    ? 'ALERT'
-                                    : '告警'
-                                  : 'LIVE'}
-                              </span>
-                              <span>CAM {camera.id}</span>
-                            </div>
-                            {cameraAlert ? (
-                              <div className="sentry-detection">
-                                <span>
-                                  {locale === 'en'
-                                    ? 'PERSON · 98%'
-                                    : '人员 · 98%'}
-                                </span>
-                              </div>
-                            ) : (
-                              <div className="sentry-scan" aria-hidden="true" />
-                            )}
-                            <div className="sentry-camera-caption">
-                              <Camera aria-hidden="true" />{' '}
-                              {locale === 'en'
-                                ? camera.label.en
-                                : camera.label.zh}
-                            </div>
-                            <span
-                              className="sentry-expand-hint"
-                              aria-hidden="true"
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={securityView === 'exterior'}
+                        aria-controls="security-camera-feed"
+                        className={
+                          securityView === 'exterior' ? 'is-active' : ''
+                        }
+                        onClick={() => setSecurityView('exterior')}
+                      >
+                        <span>{locale === 'en' ? 'Exterior' : '车外'}</span>
+                        <small>4 {locale === 'en' ? 'cams' : '路'}</small>
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={securityView === 'interior'}
+                        aria-controls="security-camera-feed"
+                        className={
+                          securityView === 'interior' ? 'is-active' : ''
+                        }
+                        onClick={() => setSecurityView('interior')}
+                      >
+                        <span>{locale === 'en' ? 'Interior' : '车内'}</span>
+                        <small>1 {locale === 'en' ? 'cam' : '路'}</small>
+                      </button>
+                    </div>
+                    {securityView === 'exterior' ? (
+                      <figure
+                        id="security-camera-feed"
+                        className="sentry-camera-wall"
+                        aria-label={
+                          locale === 'en'
+                            ? 'Four live cameras providing complete perimeter coverage'
+                            : '四路实时摄像头，全方位覆盖房车周界'
+                        }
+                      >
+                        {sentryCameras.map((camera) => {
+                          const cameraAlert =
+                            intrusion && camera.detectsIntrusion;
+                          return (
+                            <button
+                              className={`sentry-camera camera-${camera.position} ${cameraAlert ? 'is-alert' : ''}`}
+                              type="button"
+                              key={camera.id}
+                              onClick={() => setSelectedCameraId(camera.id)}
+                              aria-label={`${locale === 'en' ? camera.label.en : camera.label.zh} · ${locale === 'en' ? 'Open enlarged live camera view' : '打开实时监控大画面'}`}
                             >
-                              <Maximize2 />
+                              <Image
+                                className="sentry-camera-image"
+                                src="/assets/sentry-cameras.png"
+                                width={1024}
+                                height={682}
+                                sizes="150px"
+                                alt=""
+                              />
+                              <div
+                                className="camera-overlay"
+                                aria-hidden="true"
+                              />
+                              <div className="sentry-camera-topline">
+                                <span
+                                  className={
+                                    cameraAlert
+                                      ? 'sentry-live is-alert'
+                                      : 'sentry-live'
+                                  }
+                                >
+                                  <Radio aria-hidden="true" />{' '}
+                                  {cameraAlert
+                                    ? locale === 'en'
+                                      ? 'ALERT'
+                                      : '告警'
+                                    : 'LIVE'}
+                                </span>
+                                <span>CAM {camera.id}</span>
+                              </div>
+                              {cameraAlert ? (
+                                <div className="sentry-detection">
+                                  <span>
+                                    {locale === 'en'
+                                      ? 'PERSON · 98%'
+                                      : '人员 · 98%'}
+                                  </span>
+                                </div>
+                              ) : (
+                                <div
+                                  className="sentry-scan"
+                                  aria-hidden="true"
+                                />
+                              )}
+                              <div className="sentry-camera-caption">
+                                <Camera aria-hidden="true" />{' '}
+                                {locale === 'en'
+                                  ? camera.label.en
+                                  : camera.label.zh}
+                              </div>
+                              <span
+                                className="sentry-expand-hint"
+                                aria-hidden="true"
+                              >
+                                <Maximize2 />
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </figure>
+                    ) : (
+                      <figure
+                        id="security-camera-feed"
+                        className="sentry-camera-wall is-interior"
+                        aria-label={
+                          locale === 'en'
+                            ? 'Live interior cabin camera'
+                            : '车内实时摄像头画面'
+                        }
+                      >
+                        <button
+                          className="sentry-camera sentry-camera-interior"
+                          type="button"
+                          style={interiorCameraLightingStyle}
+                          onClick={() => setSelectedCameraId(indoorCamera.id)}
+                          aria-label={`${locale === 'en' ? indoorCamera.label.en : indoorCamera.label.zh} · ${locale === 'en' ? 'Open enlarged live camera view' : '打开实时监控大画面'}`}
+                        >
+                          <Image
+                            className="sentry-interior-image"
+                            src="/assets/sentry-cabin-camera.png"
+                            alt=""
+                            fill
+                            sizes="300px"
+                          />
+                          <div
+                            className="sentry-interior-light-wash"
+                            aria-hidden="true"
+                          />
+                          <div className="camera-overlay" aria-hidden="true" />
+                          <div className="sentry-camera-topline">
+                            <span className="sentry-live">
+                              <Radio aria-hidden="true" /> LIVE
                             </span>
-                          </button>
-                        );
-                      })}
-                    </figure>
+                            <span>CAM {indoorCamera.id}</span>
+                          </div>
+                          <div className="sentry-scan" aria-hidden="true" />
+                          <div className="sentry-camera-caption">
+                            <Camera aria-hidden="true" />{' '}
+                            {locale === 'en'
+                              ? indoorCamera.label.en
+                              : indoorCamera.label.zh}
+                          </div>
+                          <span
+                            className="sentry-expand-hint"
+                            aria-hidden="true"
+                          >
+                            <Maximize2 />
+                          </span>
+                        </button>
+                      </figure>
+                    )}
                     <div
                       className={`security-status ${intrusion ? 'security-alert' : ''}`}
                     >
@@ -2694,7 +2817,7 @@ export default function Home() {
                       <SecurityItem
                         icon={Camera}
                         label={locale === 'en' ? 'Cameras' : '摄像头'}
-                        state={locale === 'en' ? '4 / 4 online' : '4 / 4 在线'}
+                        state={locale === 'en' ? '5 / 5 online' : '5 / 5 在线'}
                         alert={false}
                       />
                       <SecurityItem
@@ -3523,9 +3646,13 @@ export default function Home() {
                       : selectedCamera.label.zh}
                   </DialogTitle>
                   <DialogDescription>
-                    {locale === 'en'
-                      ? 'Live view from a camera mounted directly on the RV body.'
-                      : '来自安装在房车车身上的摄像头实时画面。'}
+                    {selectedCamera.scope === 'interior'
+                      ? locale === 'en'
+                        ? 'Live overview of the cabin and connected appliances.'
+                        : '车内空间与联动负载的实时画面。'
+                      : locale === 'en'
+                        ? 'Live view from a camera mounted directly on the RV body.'
+                        : '来自安装在房车车身上的摄像头实时画面。'}
                   </DialogDescription>
                 </div>
                 <DialogClose
@@ -3538,16 +3665,37 @@ export default function Home() {
                 </DialogClose>
               </DialogHeader>
               <div
-                className={`camera-dialog-feed camera-${selectedCamera.position} ${intrusion && selectedCamera.detectsIntrusion ? 'is-alert' : ''}`}
+                className={`camera-dialog-feed camera-${selectedCamera.position} ${selectedCamera.scope === 'interior' ? 'is-interior-camera' : ''} ${intrusion && selectedCamera.detectsIntrusion ? 'is-alert' : ''}`}
+                style={
+                  selectedCamera.scope === 'interior'
+                    ? interiorCameraLightingStyle
+                    : undefined
+                }
               >
-                <Image
-                  className="sentry-camera-image"
-                  src="/assets/sentry-cameras.png"
-                  width={1024}
-                  height={682}
-                  sizes="(max-width: 760px) 92vw, 900px"
-                  alt={`${locale === 'en' ? selectedCamera.label.en : selectedCamera.label.zh} ${locale === 'en' ? 'enlarged live camera view' : '实时监控放大画面'}`}
-                />
+                {selectedCamera.scope === 'interior' ? (
+                  <Image
+                    className="sentry-interior-image"
+                    src="/assets/sentry-cabin-camera.png"
+                    fill
+                    sizes="(max-width: 760px) 92vw, 900px"
+                    alt={`${locale === 'en' ? selectedCamera.label.en : selectedCamera.label.zh} ${locale === 'en' ? 'enlarged live camera view' : '实时监控放大画面'}`}
+                  />
+                ) : (
+                  <Image
+                    className="sentry-camera-image"
+                    src="/assets/sentry-cameras.png"
+                    width={1024}
+                    height={682}
+                    sizes="(max-width: 760px) 92vw, 900px"
+                    alt={`${locale === 'en' ? selectedCamera.label.en : selectedCamera.label.zh} ${locale === 'en' ? 'enlarged live camera view' : '实时监控放大画面'}`}
+                  />
+                )}
+                {selectedCamera.scope === 'interior' ? (
+                  <div
+                    className="sentry-interior-light-wash"
+                    aria-hidden="true"
+                  />
+                ) : null}
                 <div className="camera-overlay" aria-hidden="true" />
                 <div className="camera-dialog-topline">
                   <span
@@ -3587,7 +3735,13 @@ export default function Home() {
                       : selectedCamera.label.zh}
                   </strong>
                   <span>
-                    {locale === 'en' ? 'Vehicle-mounted camera' : '车载摄像头'}
+                    {selectedCamera.scope === 'interior'
+                      ? locale === 'en'
+                        ? 'Cabin camera'
+                        : '车内摄像头'
+                      : locale === 'en'
+                        ? 'Vehicle-mounted camera'
+                        : '车载摄像头'}
                   </span>
                 </div>
               </div>
@@ -3599,8 +3753,8 @@ export default function Home() {
                 <span>
                   <Camera aria-hidden="true" />
                   {locale === 'en'
-                    ? '4 / 4 cameras online'
-                    : '4 / 4 摄像头在线'}
+                    ? '5 / 5 cameras online'
+                    : '5 / 5 摄像头在线'}
                 </span>
                 <span>
                   <ShieldCheck aria-hidden="true" />
