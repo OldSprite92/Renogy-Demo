@@ -153,8 +153,6 @@ type Scene = {
   time: string;
   solar: string;
   load: string;
-  batteryFlow: string;
-  runtime: string;
   temperature: string;
   inverter: Localized;
   security: boolean;
@@ -193,14 +191,14 @@ const sentryCameras = [
     id: '03',
     position: 'rear',
     scope: 'exterior',
-    label: { en: 'Left side', zh: '左侧' },
+    label: { en: 'Left Side', zh: '左侧' },
     detectsIntrusion: false,
   },
   {
     id: '04',
     position: 'camp',
     scope: 'exterior',
-    label: { en: 'Right side', zh: '右侧' },
+    label: { en: 'Right Side', zh: '右侧' },
     detectsIntrusion: false,
   },
 ] as const;
@@ -209,11 +207,12 @@ const indoorCamera = {
   id: '05',
   position: 'interior',
   scope: 'interior',
-  label: { en: 'Cabin overview', zh: '车内全景' },
+  label: { en: 'Cabin Overview', zh: '车内全景' },
   detectsIntrusion: false,
 } as const;
 
 const securityCameras = [...sentryCameras, indoorCamera] as const;
+const campSceneTime = '4:18 PM';
 
 const initialDeviceLogs: DeviceLogEntry[] = [
   {
@@ -221,21 +220,21 @@ const initialDeviceLogs: DeviceLogEntry[] = [
     sourceKey: 'initial-lights',
     device: { en: 'Lights', zh: '灯' },
     detail: { en: 'Brightness 100%', zh: '亮度 100%' },
-    time: '18:42',
+    time: toLogTime(campSceneTime),
   },
   {
     id: 2,
     sourceKey: 'initial-climate',
-    device: { en: 'Air conditioner', zh: '空调' },
-    detail: { en: 'Auto · 23°C', zh: '自动 · 23°C' },
-    time: '18:42',
+    device: { en: 'Air Conditioner', zh: '空调' },
+    detail: { en: 'Auto · 73°F', zh: '自动 · 73°F' },
+    time: toLogTime(campSceneTime),
   },
   {
     id: 1,
     sourceKey: 'initial-camera',
-    device: { en: 'Cabin camera', zh: '车内摄像头' },
-    detail: { en: 'Privacy mode', zh: '隐私模式' },
-    time: '18:42',
+    device: { en: 'Cabin Camera', zh: '车内摄像头' },
+    detail: { en: 'Privacy Mode', zh: '隐私模式' },
+    time: toLogTime(campSceneTime),
   },
 ];
 
@@ -252,41 +251,50 @@ function formatSceneTime(sceneTime: string, locale: Locale) {
   return locale === 'zh' ? toLogTime(sceneTime) : sceneTime;
 }
 
+function parsePowerWatts(value: string) {
+  const amount = Number.parseFloat(value);
+  return value.toLowerCase().includes('kw') ? amount * 1000 : amount;
+}
+
+function formatPowerWatts(watts: number) {
+  return watts >= 1000
+    ? `${(watts / 1000).toFixed(2)} kW`
+    : `${Math.round(watts)} W`;
+}
+
 const scenes: Record<SceneKey, Scene> = {
   camp: {
     key: 'camp',
     name: { en: 'Camp', zh: '驻车' },
     kicker: { en: 'Welcome to Pine Lake', zh: '欢迎抵达松湖营地' },
     message: {
-      en: 'Your RV is level, connected and ready to enjoy.',
+      en: 'Your RV is level and connected, get ready to enjoy your stay.',
       zh: '房车已调平、连接完成，可以开始享受营地生活。',
     },
-    ready: { en: 'Camp setup complete', zh: '驻车设置已完成' },
-    time: '6:42 PM',
-    solar: '1.42 kW',
-    load: '420 W',
-    batteryFlow: '+0.86 kW',
-    runtime: '38 h',
-    temperature: '23°',
+    ready: { en: 'Camp Setup Complete', zh: '驻车设置已完成' },
+    time: campSceneTime,
+    solar: '0.92 kW',
+    load: '1260 W',
+    temperature: '73°',
     inverter: { en: 'Balanced', zh: '均衡模式' },
     security: false,
     sceneIcon: TentTree,
     steps: [
-      { en: 'Auto-level complete', zh: '自动调平完成' },
-      { en: 'Awning deployed', zh: '遮阳棚已展开' },
-      { en: 'Kitchen appliances ready', zh: '厨房电器已就绪' },
+      { en: 'Auto-Level Complete', zh: '自动调平完成' },
+      { en: 'Awning Deployed', zh: '遮阳棚已展开' },
+      { en: 'Kitchen Appliances Ready', zh: '厨房电器已就绪' },
     ],
     devices: [
       {
         icon: 'lamp',
-        name: { en: 'Welcome lights', zh: '迎宾灯' },
+        name: { en: 'Welcome Lights', zh: '迎宾灯' },
         value: { en: 'Warm · 65%', zh: '暖光 · 65%' },
         active: true,
       },
       {
         icon: 'climate',
-        name: { en: 'Air conditioner', zh: '空调' },
-        value: { en: 'Auto · 23°C', zh: '自动 · 23°C' },
+        name: { en: 'Air Conditioner', zh: '空调' },
+        value: { en: 'Auto · 73°F', zh: '自动 · 73°F' },
         active: true,
       },
       {
@@ -306,46 +314,44 @@ const scenes: Record<SceneKey, Scene> = {
   away: {
     key: 'away',
     name: { en: 'Away', zh: '外出' },
-    kicker: { en: 'Explore with peace of mind', zh: '放心离开，安心探索' },
+    kicker: { en: 'Explore with Peace of Mind', zh: '放心离开，安心探索' },
     message: {
-      en: 'Protection is active while solar restores your range.',
+      en: 'Security system is active while you are outside.',
       zh: '安防系统已布防，太阳能正在补充续航。',
     },
-    ready: { en: 'Away mode secured', zh: '外出模式已布防' },
+    ready: { en: 'Away Mode Secured', zh: '外出模式已布防' },
     time: '10:18 AM',
     solar: '1.42 kW',
     load: '96 W',
-    batteryFlow: '+1.18 kW',
-    runtime: '72 h+',
-    temperature: '27°',
+    temperature: '81°',
     inverter: { en: 'Eco', zh: '节能模式' },
     security: true,
     sceneIcon: ShieldCheck,
     steps: [
       {
-        en: 'Air conditioning and cooking loads off',
+        en: 'Air Conditioning and Cooking Loads Off',
         zh: '空调及烹饪负载已关闭',
       },
-      { en: 'Doors and windows secured', zh: '门窗已锁定' },
-      { en: 'Cameras and solar priority on', zh: '摄像头与太阳能优先已开启' },
+      { en: 'Doors and Windows Secured', zh: '门窗已锁定' },
+      { en: 'Cameras and Solar Priority On', zh: '摄像头与太阳能优先已开启' },
     ],
     devices: [
       {
         icon: 'lock',
-        name: { en: 'Smart lock', zh: '智能门锁' },
+        name: { en: 'Smart Lock', zh: '智能门锁' },
         value: { en: 'Locked', zh: '已上锁' },
         active: true,
       },
       {
         icon: 'lamp',
-        name: { en: 'Cabin lights', zh: '舱内灯光' },
+        name: { en: 'Cabin Lights', zh: '舱内灯光' },
         value: { en: 'Off', zh: '已关闭' },
         active: false,
       },
       {
         icon: 'climate',
-        name: { en: 'Air conditioner', zh: '空调' },
-        value: { en: 'Powered off', zh: '已关闭' },
+        name: { en: 'Air Conditioner', zh: '空调' },
+        value: { en: 'Powered Off', zh: '已关闭' },
         active: false,
       },
       {
@@ -359,48 +365,46 @@ const scenes: Record<SceneKey, Scene> = {
   movie: {
     key: 'movie',
     name: { en: 'Movie', zh: '观影' },
-    kicker: { en: 'Your private cinema is ready', zh: '你的私人影院已就绪' },
+    kicker: { en: 'Your Private Cinema Is Ready', zh: '你的私人影院已就绪' },
     message: {
-      en: 'Lighting, sound and temperature are tuned for the moment.',
+      en: 'Lighting, sound and temperature are all set for the moment.',
       zh: '灯光、声音与温度均已调整至最佳观影状态。',
     },
-    ready: { en: 'Cinema atmosphere ready', zh: '影院氛围已就绪' },
+    ready: { en: 'Cinema Atmosphere Ready', zh: '影院氛围已就绪' },
     time: '8:12 PM',
-    solar: '0.18 kW',
+    solar: '0 W',
     load: '896 W',
-    batteryFlow: '-0.71 kW',
-    runtime: '17 h',
-    temperature: '22°',
+    temperature: '72°',
     inverter: { en: 'Performance', zh: '性能模式' },
     security: false,
     sceneIcon: Film,
     steps: [
-      { en: 'Smart shades closed', zh: '智能遮阳帘已关闭' },
-      { en: 'Cinema audio enabled', zh: '影院音响已开启' },
-      { en: 'Popcorn preset ready', zh: '爆米花预设已就绪' },
+      { en: 'Smart Shades Closed', zh: '智能遮阳帘已关闭' },
+      { en: 'Cinema Audio Enabled', zh: '影院音响已开启' },
+      { en: 'Popcorn Preset Ready', zh: '爆米花预设已就绪' },
     ],
     devices: [
       {
         icon: 'tv',
-        name: { en: 'Entertainment system', zh: '影音系统' },
+        name: { en: 'Entertainment System', zh: '影音系统' },
         value: { en: 'Cinema · On', zh: '影院 · 已开启' },
         active: true,
       },
       {
         icon: 'audio',
-        name: { en: 'Spatial audio', zh: '空间音响' },
+        name: { en: 'Spatial Audio', zh: '空间音响' },
         value: { en: 'Immersive', zh: '沉浸模式' },
         active: true,
       },
       {
         icon: 'lamp',
-        name: { en: 'Ambient lights', zh: '氛围灯' },
+        name: { en: 'Ambient Lights', zh: '氛围灯' },
         value: { en: 'Warm · 30%', zh: '暖光 · 30%' },
         active: true,
       },
       {
         icon: 'blinds',
-        name: { en: 'Smart shades', zh: '智能遮阳帘' },
+        name: { en: 'Smart Shades', zh: '智能遮阳帘' },
         value: { en: 'Closed', zh: '已关闭' },
         active: false,
       },
@@ -410,32 +414,30 @@ const scenes: Record<SceneKey, Scene> = {
     key: 'sleep',
     name: { en: 'Sleep', zh: '睡眠' },
     kicker: {
-      en: 'Rest easy. Renogy is watching.',
+      en: 'Rest easy. Renogy is safeguarding',
       zh: '安心入睡，Renogy为你守护',
     },
     message: {
       en: 'Quiet power, ideal comfort and night security work as one.',
       zh: '静音供电、舒适环境与夜间安防正在协同运行。',
     },
-    ready: { en: 'Sleep mode ready', zh: '睡眠模式已就绪' },
+    ready: { en: 'Sleep Mode Ready', zh: '睡眠模式已就绪' },
     time: '10:36 PM',
     solar: '0 W',
     load: '238 W',
-    batteryFlow: '-0.24 kW',
-    runtime: '41 h',
-    temperature: '24°',
+    temperature: '75°',
     inverter: { en: 'Silent', zh: '静音模式' },
     security: true,
     sceneIcon: Moon,
     steps: [
-      { en: 'Lights and cooking loads off', zh: '灯光及烹饪负载已关闭' },
-      { en: 'Silent power enabled', zh: '静音供电已开启' },
-      { en: 'Night Guard armed', zh: '夜间守护已布防' },
+      { en: 'Lights and Cooking Loads Off', zh: '灯光及烹饪负载已关闭' },
+      { en: 'Silent Power Enabled', zh: '静音供电已开启' },
+      { en: 'Night Guard Armed', zh: '夜间守护已布防' },
     ],
     devices: [
       {
         icon: 'lamp',
-        name: { en: 'Ambient lights', zh: '氛围灯' },
+        name: { en: 'Ambient Lights', zh: '氛围灯' },
         value: { en: 'Warm · 15%', zh: '暖光 · 15%' },
         active: true,
       },
@@ -447,8 +449,8 @@ const scenes: Record<SceneKey, Scene> = {
       },
       {
         icon: 'climate',
-        name: { en: 'Air conditioner', zh: '空调' },
-        value: { en: 'Sleep · 24°C', zh: '睡眠 · 24°C' },
+        name: { en: 'Air Conditioner', zh: '空调' },
+        value: { en: 'Sleep · 75°F', zh: '睡眠 · 75°F' },
         active: true,
       },
       {
@@ -464,11 +466,11 @@ const scenes: Record<SceneKey, Scene> = {
 const sceneOrder: SceneKey[] = ['camp', 'away', 'movie', 'sleep'];
 
 const systemHealthChecks: Localized[] = [
-  { en: 'Power supply and energy storage', zh: '供电与储能' },
-  { en: 'Load scheduling', zh: '负载调度' },
-  { en: 'Standby power management', zh: '待机能耗管理' },
-  { en: 'Power conversion', zh: '电能转换' },
-  { en: 'Scene automation', zh: '场景联动' },
+  { en: 'Power Supply and Energy Storage', zh: '供电与储能' },
+  { en: 'Load Scheduling', zh: '负载调度' },
+  { en: 'Standby Power Management', zh: '待机能耗管理' },
+  { en: 'Power Conversion', zh: '电能转换' },
+  { en: 'Mode Automation', zh: '场景联动' },
 ];
 
 function getHealthLevel(score: number): HealthLevel {
@@ -512,12 +514,12 @@ const energyInsights: Record<
     score: 91,
     grade: { en: 'Excellent', zh: '优秀' },
     summary: {
-      en: 'Comfort and charging are well balanced',
-      zh: '舒适体验与充电效率保持均衡',
+      en: 'Comfort is prioritized while late-afternoon solar remains available',
+      zh: '下午光照仍可用时优先保障舒适体验',
     },
     explanation: {
-      en: 'Strong solar input covers the active cabin loads and still leaves surplus energy for the battery.',
-      zh: '太阳能输入能够覆盖当前舱内负载，并保留余量为电池充电。',
+      en: 'Late-afternoon solar offsets most of the active cabin load while the battery supplies the remaining demand.',
+      zh: '下午太阳能正在抵消大部分舱内负载，剩余用电需求由电池补充。',
     },
     opportunity: {
       en: 'Run high-power cooking while solar input is strongest to protect battery range.',
@@ -525,8 +527,8 @@ const energyInsights: Record<
     },
     actions: [
       {
-        en: 'Solar surplus is charging the battery',
-        zh: '太阳能余量正在为电池充电',
+        en: 'Late-afternoon solar is offsetting most of the cabin load',
+        zh: '下午太阳能正在抵消大部分舱内负载',
       },
       {
         en: 'Kitchen appliances await manual start',
@@ -536,22 +538,22 @@ const energyInsights: Record<
     ],
     factors: [
       {
-        name: { en: 'Load scheduling', zh: '负载调度' },
+        name: { en: 'Load Scheduling', zh: '负载调度' },
         weight: 35,
         score: 92,
       },
       {
-        name: { en: 'Standby power management', zh: '待机能耗管理' },
+        name: { en: 'Standby Power Management', zh: '待机能耗管理' },
         weight: 25,
         score: 88,
       },
       {
-        name: { en: 'Power conversion', zh: '电能转换' },
+        name: { en: 'Power Conversion', zh: '电能转换' },
         weight: 25,
         score: 94,
       },
       {
-        name: { en: 'Renewable energy use', zh: '可再生能源利用' },
+        name: { en: 'Renewable Energy Utilization', zh: '可再生能源利用' },
         weight: 15,
         score: 88,
       },
@@ -569,7 +571,7 @@ const energyInsights: Record<
       zh: '舒适类负载已暂停，太阳能优先用于补充电池续航。',
     },
     opportunity: {
-      en: 'This scene is already near its practical efficiency limit.',
+      en: 'This mode is already near its practical efficiency limit.',
       zh: '该场景已接近当前配置下的最佳能效。',
     },
     actions: [
@@ -582,22 +584,22 @@ const energyInsights: Record<
     ],
     factors: [
       {
-        name: { en: 'Load scheduling', zh: '负载调度' },
+        name: { en: 'Load Scheduling', zh: '负载调度' },
         weight: 35,
         score: 99,
       },
       {
-        name: { en: 'Standby power management', zh: '待机能耗管理' },
+        name: { en: 'Standby Power Management', zh: '待机能耗管理' },
         weight: 25,
         score: 98,
       },
       {
-        name: { en: 'Power conversion', zh: '电能转换' },
+        name: { en: 'Power Conversion', zh: '电能转换' },
         weight: 25,
         score: 94,
       },
       {
-        name: { en: 'Renewable energy use', zh: '可再生能源利用' },
+        name: { en: 'Renewable Energy Utilization', zh: '可再生能源利用' },
         weight: 15,
         score: 96,
       },
@@ -611,8 +613,8 @@ const energyInsights: Record<
       zh: '沉浸体验正在使用更多可用能源',
     },
     explanation: {
-      en: 'The entertainment system, spatial audio and Performance power mode are active while solar input is limited.',
-      zh: '影音、空间音响和性能供电同时运行，且当前太阳能输入有限。',
+      en: 'The entertainment system, spatial audio and Performance power mode are active after sunset with no solar input.',
+      zh: '日落后已无太阳能输入，影音、空间音响和性能供电正在同时运行。',
     },
     opportunity: {
       en: 'Returning the inverter to Balanced mode after the movie could recover 5 points.',
@@ -625,28 +627,28 @@ const energyInsights: Record<
       },
       { en: 'Ambient lighting is limited to 30%', zh: '氛围灯限制在30%' },
       {
-        en: 'Cooking never auto-starts from a scene',
+        en: 'Cooking never auto-starts from a mode',
         zh: '场景不会自动启动烹饪',
       },
     ],
     factors: [
       {
-        name: { en: 'Load scheduling', zh: '负载调度' },
+        name: { en: 'Load Scheduling', zh: '负载调度' },
         weight: 35,
         score: 84,
       },
       {
-        name: { en: 'Standby power management', zh: '待机能耗管理' },
+        name: { en: 'Standby Power Management', zh: '待机能耗管理' },
         weight: 25,
         score: 85,
       },
       {
-        name: { en: 'Power conversion', zh: '电能转换' },
+        name: { en: 'Power Conversion', zh: '电能转换' },
         weight: 25,
         score: 92,
       },
       {
-        name: { en: 'Renewable energy use', zh: '可再生能源利用' },
+        name: { en: 'Renewable Energy Utilization', zh: '可再生能源利用' },
         weight: 15,
         score: 82,
       },
@@ -660,12 +662,12 @@ const energyInsights: Record<
       zh: '静音舒适体验正在精细控制能耗',
     },
     explanation: {
-      en: 'Lighting and entertainment loads are off while climate, humidity and security run in low-power modes.',
+      en: 'Lighting and entertainment loads are off while climate control, the humidifier and security systems run in low-power modes.',
       zh: '照明与影音负载已关闭，空调、加湿和安防以低功耗模式运行。',
     },
     opportunity: {
-      en: 'Raising the climate target by 1°C could add another 2 points.',
-      zh: '将空调目标温度提高1°C，预计还可提升2分。',
+      en: 'Raising the climate target by 2°F could add another 2 points.',
+      zh: '将空调目标温度提高2°F，预计还可提升2分。',
     },
     actions: [
       {
@@ -680,22 +682,22 @@ const energyInsights: Record<
     ],
     factors: [
       {
-        name: { en: 'Load scheduling', zh: '负载调度' },
+        name: { en: 'Load Scheduling', zh: '负载调度' },
         weight: 35,
         score: 96,
       },
       {
-        name: { en: 'Standby power management', zh: '待机能耗管理' },
+        name: { en: 'Standby Power Management', zh: '待机能耗管理' },
         weight: 25,
         score: 92,
       },
       {
-        name: { en: 'Power conversion', zh: '电能转换' },
+        name: { en: 'Power Conversion', zh: '电能转换' },
         weight: 25,
         score: 94,
       },
       {
-        name: { en: 'Renewable energy use', zh: '可再生能源利用' },
+        name: { en: 'Renewable Energy Utilization', zh: '可再生能源利用' },
         weight: 15,
         score: 92,
       },
@@ -707,12 +709,12 @@ const visualLoads: VisualLoad[] = [
   {
     key: 'climate',
     icon: Wind,
-    name: { en: 'Air conditioner', zh: '空调' },
+    name: { en: 'Air Conditioner', zh: '空调' },
     states: {
-      camp: { on: true, value: { en: 'Auto · 23°C', zh: '自动 · 23°C' } },
+      camp: { on: true, value: { en: 'Auto · 73°F', zh: '自动 · 73°F' } },
       away: { on: false, value: { en: 'Off', zh: '已关闭' } },
-      movie: { on: true, value: { en: 'Low · 22°C', zh: '低风 · 22°C' } },
-      sleep: { on: true, value: { en: 'Sleep · 24°C', zh: '睡眠 · 24°C' } },
+      movie: { on: true, value: { en: 'Low · 72°F', zh: '低风 · 72°F' } },
+      sleep: { on: true, value: { en: 'Sleep · 75°F', zh: '睡眠 · 75°F' } },
     },
   },
   {
@@ -729,7 +731,7 @@ const visualLoads: VisualLoad[] = [
   {
     key: 'coffee',
     icon: Coffee,
-    name: { en: 'Coffee maker', zh: '咖啡机' },
+    name: { en: 'Coffee Maker', zh: '咖啡机' },
     states: {
       camp: { on: true, value: { en: 'Brewing', zh: '冲煮中' } },
       away: { on: false, value: { en: 'Off', zh: '已关闭' } },
@@ -740,7 +742,7 @@ const visualLoads: VisualLoad[] = [
   {
     key: 'shades',
     icon: Blinds,
-    name: { en: 'Smart shades', zh: '智能遮阳帘' },
+    name: { en: 'Smart Shades', zh: '智能遮阳帘' },
     states: {
       camp: { on: true, value: { en: 'Open', zh: '已打开' } },
       away: { on: false, value: { en: 'Closed', zh: '已关闭' } },
@@ -751,7 +753,7 @@ const visualLoads: VisualLoad[] = [
   {
     key: 'tv',
     icon: Tv,
-    name: { en: 'Entertainment system', zh: '影音系统' },
+    name: { en: 'Entertainment System', zh: '影音系统' },
     states: {
       camp: { on: true, value: { en: 'Standard', zh: '标准模式' } },
       away: { on: false, value: { en: 'Off', zh: '已关闭' } },
@@ -762,33 +764,33 @@ const visualLoads: VisualLoad[] = [
   {
     key: 'camera',
     icon: Camera,
-    name: { en: 'Cabin camera', zh: '车内摄像头' },
+    name: { en: 'Cabin Camera', zh: '车内摄像头' },
     states: {
-      camp: { on: false, value: { en: 'Privacy mode', zh: '隐私模式' } },
+      camp: { on: false, value: { en: 'Privacy Mode', zh: '隐私模式' } },
       away: {
         on: true,
-        value: { en: 'Cabin live view', zh: '车内画面已开启' },
+        value: { en: 'Cabin Live View', zh: '车内画面已开启' },
       },
-      movie: { on: false, value: { en: 'Privacy mode', zh: '隐私模式' } },
-      sleep: { on: true, value: { en: 'Night monitoring', zh: '夜间监控' } },
+      movie: { on: false, value: { en: 'Privacy Mode', zh: '隐私模式' } },
+      sleep: { on: true, value: { en: 'Night Monitoring', zh: '夜间监控' } },
     },
   },
   {
     key: 'sentry-camera',
     icon: ScanLine,
-    name: { en: 'Side-view mirror camera', zh: '外后视镜摄像头' },
+    name: { en: 'Side-View Mirror Camera', zh: '外后视镜摄像头' },
     states: {
       camp: {
         on: false,
-        value: { en: 'Sentry Mode off', zh: '哨兵模式已关闭' },
+        value: { en: 'Sentry Mode Off', zh: '哨兵模式已关闭' },
       },
       away: {
         on: true,
-        value: { en: 'Exterior monitoring', zh: '车外监控中' },
+        value: { en: 'Exterior Monitoring', zh: '车外监控中' },
       },
       movie: {
         on: false,
-        value: { en: 'Sentry Mode off', zh: '哨兵模式已关闭' },
+        value: { en: 'Sentry Mode Off', zh: '哨兵模式已关闭' },
       },
       sleep: {
         on: true,
@@ -802,20 +804,20 @@ const visualLoads: VisualLoad[] = [
     name: { en: 'Microwave', zh: '微波炉' },
     states: {
       camp: { on: false, value: { en: 'Ready · Reheat', zh: '待启动 · 加热' } },
-      away: { on: false, value: { en: 'Safety shutoff', zh: '安全断电' } },
-      movie: { on: false, value: { en: 'Popcorn preset', zh: '爆米花预设' } },
-      sleep: { on: false, value: { en: 'Night lock', zh: '夜间锁定' } },
+      away: { on: false, value: { en: 'Safety Shutoff', zh: '安全断电' } },
+      movie: { on: false, value: { en: 'Popcorn Preset', zh: '爆米花预设' } },
+      sleep: { on: false, value: { en: 'Night Lock', zh: '夜间锁定' } },
     },
   },
   {
     key: 'induction',
     icon: CookingPot,
-    name: { en: 'Induction cooktop', zh: '电磁炉' },
+    name: { en: 'Induction Cooktop', zh: '电磁炉' },
     states: {
       camp: { on: false, value: { en: 'Ready · Simmer', zh: '待启动 · 慢炖' } },
-      away: { on: false, value: { en: 'Safety shutoff', zh: '安全断电' } },
-      movie: { on: false, value: { en: 'Safety shutoff', zh: '安全断电' } },
-      sleep: { on: false, value: { en: 'Night lock', zh: '夜间锁定' } },
+      away: { on: false, value: { en: 'Safety Shutoff', zh: '安全断电' } },
+      movie: { on: false, value: { en: 'Safety Shutoff', zh: '安全断电' } },
+      sleep: { on: false, value: { en: 'Night Lock', zh: '夜间锁定' } },
     },
   },
   {
@@ -843,7 +845,7 @@ const visualLoads: VisualLoad[] = [
   {
     key: 'audio',
     icon: Volume2,
-    name: { en: 'Spatial audio', zh: '空间音响' },
+    name: { en: 'Spatial Audio', zh: '空间音响' },
     states: {
       camp: { on: true, value: { en: 'Music · 28%', zh: '音乐 · 28%' } },
       away: { on: false, value: { en: 'Off', zh: '已关闭' } },
@@ -865,47 +867,47 @@ const visualLoads: VisualLoad[] = [
   {
     key: 'lock',
     icon: Lock,
-    name: { en: 'Entry lock', zh: '入户门锁' },
+    name: { en: 'Entry Lock', zh: '入户门锁' },
     states: {
       camp: { on: false, value: { en: 'Unlocked', zh: '已解锁' } },
       away: { on: true, value: { en: 'Secured', zh: '已锁定' } },
       movie: { on: false, value: { en: 'Unlocked', zh: '已解锁' } },
-      sleep: { on: true, value: { en: 'Night lock', zh: '夜间锁定' } },
+      sleep: { on: true, value: { en: 'Night Lock', zh: '夜间锁定' } },
     },
   },
   {
     key: 'temperature-sensor',
     icon: Thermometer,
     kind: 'sensor',
-    name: { en: 'Cabin temperature sensor', zh: '舱内温度传感器' },
+    name: { en: 'Cabin Temperature Sensor', zh: '舱内温度传感器' },
     states: {
-      camp: { on: true, value: { en: '23°C', zh: '23°C' } },
-      away: { on: true, value: { en: '27°C', zh: '27°C' } },
-      movie: { on: true, value: { en: '22°C', zh: '22°C' } },
-      sleep: { on: true, value: { en: '24°C', zh: '24°C' } },
+      camp: { on: true, value: { en: '73°F', zh: '73°F' } },
+      away: { on: true, value: { en: '81°F', zh: '81°F' } },
+      movie: { on: true, value: { en: '72°F', zh: '72°F' } },
+      sleep: { on: true, value: { en: '75°F', zh: '75°F' } },
     },
   },
   {
     key: 'air-sensor',
     icon: Wind,
     kind: 'sensor',
-    name: { en: 'Air quality sensor', zh: '空气质量传感器' },
+    name: { en: 'Air Quality Sensor', zh: '空气质量传感器' },
     states: {
       camp: {
         on: true,
-        value: { en: 'Excellent · CO₂ 620 ppm', zh: '优 · CO₂ 620 ppm' },
+        value: { en: 'Good · CO₂ 620 ppm', zh: '优 · CO₂ 620 ppm' },
       },
       away: {
         on: true,
-        value: { en: 'Excellent · CO₂ 580 ppm', zh: '优 · CO₂ 580 ppm' },
+        value: { en: 'Good · CO₂ 580 ppm', zh: '优 · CO₂ 580 ppm' },
       },
       movie: {
         on: true,
-        value: { en: 'Excellent · CO₂ 690 ppm', zh: '优 · CO₂ 690 ppm' },
+        value: { en: 'Good · CO₂ 690 ppm', zh: '优 · CO₂ 690 ppm' },
       },
       sleep: {
         on: true,
-        value: { en: 'Excellent · CO₂ 650 ppm', zh: '优 · CO₂ 650 ppm' },
+        value: { en: 'Good · CO₂ 650 ppm', zh: '优 · CO₂ 650 ppm' },
       },
     },
   },
@@ -913,7 +915,7 @@ const visualLoads: VisualLoad[] = [
     key: 'noise-sensor',
     icon: Waves,
     kind: 'sensor',
-    name: { en: 'Cabin noise sensor', zh: '舱内噪声传感器' },
+    name: { en: 'Cabin Noise Sensor', zh: '舱内噪声传感器' },
     states: {
       camp: { on: true, value: { en: '28 dB', zh: '28分贝' } },
       away: { on: true, value: { en: '26 dB', zh: '26分贝' } },
@@ -925,8 +927,8 @@ const visualLoads: VisualLoad[] = [
 
 const manualLoadValues: Record<LoadKey, { on: Localized; off: Localized }> = {
   climate: {
-    on: { en: 'Manual · 24°C', zh: '手动 · 24°C' },
-    off: { en: 'Powered off', zh: '已关闭' },
+    on: { en: 'Manual · 75°F', zh: '手动 · 75°F' },
+    off: { en: 'Powered Off', zh: '已关闭' },
   },
   lights: {
     on: { en: '65%', zh: '65%' },
@@ -945,12 +947,12 @@ const manualLoadValues: Record<LoadKey, { on: Localized; off: Localized }> = {
     off: { en: 'Off', zh: '已关闭' },
   },
   camera: {
-    on: { en: 'Cabin live view', zh: '车内画面已开启' },
-    off: { en: 'Privacy mode', zh: '隐私模式' },
+    on: { en: 'Cabin Live View', zh: '车内画面已开启' },
+    off: { en: 'Privacy Mode', zh: '隐私模式' },
   },
   'sentry-camera': {
-    on: { en: 'Exterior monitoring', zh: '车外监控中' },
-    off: { en: 'Sentry Mode off', zh: '哨兵模式已关闭' },
+    on: { en: 'Exterior Monitoring', zh: '车外监控中' },
+    off: { en: 'Sentry Mode Off', zh: '哨兵模式已关闭' },
   },
   humidifier: {
     on: { en: 'Auto · 48%', zh: '自动 · 48%' },
@@ -965,8 +967,8 @@ const manualLoadValues: Record<LoadKey, { on: Localized; off: Localized }> = {
     off: { en: 'Off', zh: '已关闭' },
   },
   inverter: {
-    on: { en: 'Manual power', zh: '手动供电' },
-    off: { en: 'Powered off', zh: '已关闭' },
+    on: { en: 'Manual Power', zh: '手动供电' },
+    off: { en: 'Powered Off', zh: '已关闭' },
   },
   lock: {
     on: { en: 'Secured', zh: '已锁定' },
@@ -974,11 +976,11 @@ const manualLoadValues: Record<LoadKey, { on: Localized; off: Localized }> = {
   },
   microwave: {
     on: { en: 'Reheat · 800 W', zh: '加热 · 800 W' },
-    off: { en: 'Ready · Manual start', zh: '待启动 · 手动确认' },
+    off: { en: 'Ready · Manual Start', zh: '待启动 · 手动确认' },
   },
   induction: {
     on: { en: 'Simmer · 600 W', zh: '慢炖 · 600 W' },
-    off: { en: 'Safety shutoff', zh: '安全断电' },
+    off: { en: 'Safety Shutoff', zh: '安全断电' },
   },
   'temperature-sensor': {
     on: { en: 'Online', zh: '在线' },
@@ -1075,7 +1077,7 @@ function createSceneControls(scene: SceneKey): DeviceControls {
   const presets = {
     camp: {
       climateMode: 'Auto',
-      target: 23,
+      target: 73,
       fan: 'Auto',
       main: 100,
       cct: 3200,
@@ -1097,7 +1099,7 @@ function createSceneControls(scene: SceneKey): DeviceControls {
     },
     away: {
       climateMode: 'Auto',
-      target: 27,
+      target: 81,
       fan: 'Low',
       main: 0,
       cct: 3200,
@@ -1119,7 +1121,7 @@ function createSceneControls(scene: SceneKey): DeviceControls {
     },
     movie: {
       climateMode: 'Cool',
-      target: 22,
+      target: 72,
       fan: 'Low',
       main: 35,
       cct: 3000,
@@ -1141,7 +1143,7 @@ function createSceneControls(scene: SceneKey): DeviceControls {
     },
     sleep: {
       climateMode: 'Sleep',
-      target: 24,
+      target: 75,
       fan: 'Low',
       main: 15,
       cct: 2700,
@@ -1279,8 +1281,8 @@ export default function Home() {
     switch (load.key) {
       case 'climate':
         return localized(
-          `${controlTextFor(String(controls.mode), 'en')} · ${controls.target}°C`,
-          `${controlTextFor(String(controls.mode), 'zh')} · ${controls.target}°C`,
+          `${controlTextFor(String(controls.mode), 'en')} · ${controls.target}°F`,
+          `${controlTextFor(String(controls.mode), 'zh')} · ${controls.target}°F`,
         );
       case 'lights':
         return localized(`${controls.brightness}%`, `${controls.brightness}%`);
@@ -1295,8 +1297,8 @@ export default function Home() {
               );
       case 'tv':
         return localized(
-          `${controlTextFor(String(controls.source), 'en')} · On`,
-          `${controlTextFor(String(controls.source), 'zh')} · 已开启`,
+          controlTextFor(String(controls.source), 'en'),
+          controlTextFor(String(controls.source), 'zh'),
         );
       case 'humidifier':
         return localized(
@@ -1499,7 +1501,7 @@ export default function Home() {
     lock: 1,
   };
   const kitchenLoadWatts = microwavePower + inductionPower;
-  const baseSceneLoadWatts = Number.parseFloat(current.load);
+  const baseSceneLoadWatts = parsePowerWatts(current.load);
   const estimatedLoadWatts = (load: VisualLoad) => {
     switch (load.key) {
       case 'climate':
@@ -1554,11 +1556,11 @@ export default function Home() {
   );
   const manualLoadDeltaWatts = addedManualLoadWatts - removedManualLoadWatts;
   const rvLoadWatts = Math.max(35, baseSceneLoadWatts + manualLoadDeltaWatts);
-  const rvLoadValue = `${Math.round(rvLoadWatts)} W`;
+  const rvLoadValue = formatPowerWatts(rvLoadWatts);
+  const solarInputWatts = Math.round(parsePowerWatts(current.solar));
   const batteryFlowKw =
     Math.round(
-      (Number.parseFloat(current.batteryFlow) - manualLoadDeltaWatts / 1000) *
-        100,
+      ((solarInputWatts - rvLoadWatts) / 1000) * 100,
     ) / 100;
   const batteryIsCharging = batteryFlowKw >= 0;
   const batteryFlowPower = `${Math.abs(batteryFlowKw).toFixed(2)} kW`;
@@ -1572,12 +1574,6 @@ export default function Home() {
   const hasHeavyEnergyDeficit = batteryFlowKw < -1.5;
   const hasAwaySecurityGap =
     activeScene === 'away' && (!indoorCameraOn || !sentryCameraOn);
-  const hasCriticalEnergyIssue =
-    hasInverterPowerConflict ||
-    hasOutputOverload ||
-    hasHeavyEnergyDeficit ||
-    hasAwaySecurityGap;
-  const solarInputWatts = Math.round(Number.parseFloat(current.solar) * 1000);
   const comfortLoadCount = [tvOn, audioOn, coffeeOn, humidifierOn].filter(
     Boolean,
   ).length;
@@ -1627,7 +1623,9 @@ export default function Home() {
         );
   const renewableUseScore = clampHealthScore(
     factorScore(3, 88) -
-      (batteryFlowKw < 0 ? Math.ceil(Math.abs(batteryFlowKw) * 8) : 0) -
+      (solarInputWatts > 0 && batteryFlowKw < 0
+        ? Math.ceil(Math.abs(batteryFlowKw) * 8)
+        : 0) -
       (batteryFlowKw >= 0 && batteryFlowKw < 0.3 ? 4 : 0),
   );
   const sceneCoordinationScore = hasAwaySecurityGap
@@ -1640,7 +1638,7 @@ export default function Home() {
   const healthDiagnostics: HealthDiagnostic[] = [
     {
       id: 'load-scheduling',
-      name: { en: 'Load scheduling', zh: '负载调度' },
+      name: { en: 'Load Scheduling', zh: '负载调度' },
       level:
         hasOutputOverload || hasHeavyEnergyDeficit
           ? 'urgent'
@@ -1652,7 +1650,7 @@ export default function Home() {
       },
       observed: {
         en: manuallyEnabledLoads.length
-          ? `${manuallyEnabledNames.en} were manually enabled. Total load is now ${rvLoadValue}, ${addedManualLoadWatts} W above the scene preset.`
+          ? `${manuallyEnabledNames.en} were manually enabled. Total load is now ${rvLoadValue}, ${addedManualLoadWatts} W above the mode preset.`
           : `Total load is ${rvLoadValue}; inverter output limit is ${inverterOutputLimit} W.`,
         zh: manuallyEnabledLoads.length
           ? `手动开启了${manuallyEnabledNames.zh}，当前总负载${rvLoadValue}，比场景预设增加 ${addedManualLoadWatts} W。`
@@ -1689,7 +1687,7 @@ export default function Home() {
     },
     {
       id: 'standby-control',
-      name: { en: 'Standby power management', zh: '待机能耗管理' },
+      name: { en: 'Standby Power Management', zh: '待机能耗管理' },
       level: getHealthLevel(standbyScore),
       score: standbyScore,
       device: {
@@ -1711,7 +1709,7 @@ export default function Home() {
     },
     {
       id: 'power-conversion',
-      name: { en: 'Power conversion', zh: '电能转换' },
+      name: { en: 'Power Conversion', zh: '电能转换' },
       level:
         hasInverterPowerConflict || hasOutputOverload
           ? 'urgent'
@@ -1748,7 +1746,7 @@ export default function Home() {
     },
     {
       id: 'renewable-use',
-      name: { en: 'Renewable energy use', zh: '可再生能源利用' },
+      name: { en: 'Renewable Energy Utilization', zh: '可再生能源利用' },
       level: getHealthLevel(renewableUseScore),
       score: renewableUseScore,
       device: { en: 'Solar array / battery', zh: '太阳能板 / 储能电池' },
@@ -1757,24 +1755,36 @@ export default function Home() {
         zh: `太阳能输入 ${solarInputWatts} W，电池当前以 ${batteryFlowPower}${batteryIsCharging ? '充电' : '放电'}，总负载${rvLoadValue}。`,
       },
       impact: {
-        en: 'The current solar capacity leaves limited charging headroom. With sustained high loads, the entire system cannot support extended use.',
-        zh: '当前太阳能功率偏小，充电余量不足；当总负载持续偏高时，整套系统无法支撑长时间使用。',
+        en:
+          solarInputWatts === 0
+            ? 'No solar contribution is expected after sunset, so the battery is supplying the current load.'
+            : 'The current solar input leaves limited charging headroom. Sustained high loads will reduce battery runtime.',
+        zh:
+          solarInputWatts === 0
+            ? '日落后无太阳能输入属于正常现象，当前负载由电池供电。'
+            : '当前太阳能输入留给电池的充电余量有限，持续高负载会缩短电池续航。',
       },
       recommendation: {
-        en: 'Increase the total solar array capacity to 3000 W as soon as possible, and schedule high-power loads during the strongest solar window.',
-        zh: '请尽快将太阳能板总功率增加至 3000 W，并将大功率负载安排在日照最强时段使用。',
+        en:
+          solarInputWatts === 0
+            ? 'Schedule energy-intensive modes during daylight when practical, or keep the current session within the estimated battery runtime.'
+            : 'Schedule high-power loads during the strongest solar window to preserve battery runtime.',
+        zh:
+          solarInputWatts === 0
+            ? '条件允许时将高耗能场景安排在白天，或确保当前使用时长不超过预估电池续航。'
+            : '建议将大功率负载安排在日照最强时段，以保留更多电池续航。',
       },
     },
     {
       id: 'scene-coordination',
-      name: { en: 'Scene automation', zh: '场景联动' },
+      name: { en: 'Mode Automation', zh: '场景联动' },
       level: hasAwaySecurityGap
         ? 'urgent'
         : getHealthLevel(sceneCoordinationScore),
       score: sceneCoordinationScore,
       device: changedSceneLoads.length
         ? changedLoadNames
-        : { en: 'Scene automation', zh: '场景联动' },
+        : { en: 'Mode Automation', zh: '场景联动' },
       observed: {
         en: changedSceneLoads.length
           ? `${changedSceneLoads.length} device settings now differ from the ${scenes[activeScene].name.en} preset: ${changedLoadNames.en}.`
@@ -1790,11 +1800,11 @@ export default function Home() {
           }
         : changedSceneLoads.length
           ? {
-              en: 'Manual changes have weakened the intended energy-saving behavior of this scene.',
+              en: 'Manual changes have weakened the intended energy-saving behavior of this mode.',
               zh: '手动变更已削弱该场景原本的节能联动效果。',
             }
           : {
-              en: 'No conflicting scene actions were detected.',
+              en: 'No conflicting mode actions were detected.',
               zh: '未发现相互冲突的场景动作。',
             },
       recommendation: hasAwaySecurityGap
@@ -1825,6 +1835,9 @@ export default function Home() {
   const selectedHealthDiagnostic = healthDiagnostics.find(
     (item) => item.id === selectedHealthCheckId,
   );
+  const urgentHealthDiagnostic = healthDiagnostics.find(
+    (item) => item.level === 'urgent',
+  );
   const healthPassedActions = healthDiagnostics
     .filter((diagnostic) => diagnostic.level === 'excellent')
     .slice(0, 3)
@@ -1841,22 +1854,23 @@ export default function Home() {
       : hasAwaySecurityGap
         ? healthDiagnostics.find((item) => item.id === 'scene-coordination')
             ?.recommendation
-        : undefined;
+        : urgentHealthDiagnostic?.recommendation;
   const calculatedHealthScore = Math.round(
     healthDiagnostics.reduce(
       (total, diagnostic) => total + diagnostic.score,
       0,
     ) / healthDiagnostics.length,
   );
-  const selectedHealthScore = hasCriticalEnergyIssue
-    ? Math.min(59, calculatedHealthScore)
-    : calculatedHealthScore;
-  const selectedHealthLevel: HealthLevel =
+  const lowestUrgentScore = Math.min(
+    ...healthDiagnostics
+      .filter((diagnostic) => diagnostic.level === 'urgent')
+      .map((diagnostic) => diagnostic.score),
+  );
+  const selectedHealthScore =
     selectedUrgentIssueCount > 0
-      ? 'urgent'
-      : selectedImproveIssueCount > 0
-        ? 'improve'
-        : 'excellent';
+      ? Math.min(calculatedHealthScore, lowestUrgentScore)
+      : calculatedHealthScore;
+  const selectedHealthLevel = getHealthLevel(selectedHealthScore);
   const activeHealthLevel = selectedHealthLevel;
   const selectedHealthTitle = getHealthTitle(selectedHealthLevel);
   const activeHealthTitle = getHealthTitle(activeHealthLevel);
@@ -1880,14 +1894,13 @@ export default function Home() {
     : locale === 'en'
       ? 'Discharging'
       : '放电中';
-  const estimatedRuntime =
-    kitchenLoadWatts === 0 || batteryIsCharging
-      ? current.runtime
-      : `${Math.max(1, Math.floor(9.8 / Math.abs(batteryFlowKw)))} h`;
+  const usableBatteryKwh = 8.2;
+  const estimatedRuntime = batteryIsCharging
+    ? '72 h+'
+    : `${Math.max(1, Math.floor(usableBatteryKwh / Math.abs(batteryFlowKw)))} h`;
   const forecastCurvePath = batteryIsCharging
     ? 'M2 49 C28 45 31 32 55 35 S84 16 108 22 S145 8 178 13'
     : 'M2 11 C28 14 38 22 58 20 S91 33 112 31 S149 46 178 49';
-  const usableBatteryKwh = 8.2;
   const microwaveSessionKwh = microwaveOn
     ? (microwavePower / 1000) *
       (Number(deviceControls.microwave?.timer ?? 90) / 3600)
@@ -1922,7 +1935,7 @@ export default function Home() {
             ? `Cooking is included in the forecast. Your usual routine can continue for about ${supportedRoutineDays} days.`
             : `烹饪用电已计入预测，按日常习惯预计仍可维持约${supportedRoutineDays}天。`
       : locale === 'en'
-        ? `Based on your daily habits, the current battery supports about ${supportedRoutineDays} days.`
+        ? `Based on your daily habits, the current battery level will last about ${supportedRoutineDays} days`
         : `根据你的日常习惯，当前电量预计可维持约${supportedRoutineDays}天。`;
   const aiRecommendation =
     microwaveOn && inductionOn
@@ -1942,7 +1955,7 @@ export default function Home() {
   const onlineSensorCount = sensorDevices.filter(
     (load) => getLoadState(load).on,
   ).length;
-  const temperatureReading = pick(temperatureSensor.value).replace('°C', '');
+  const temperatureReading = pick(temperatureSensor.value).replace('°F', '');
   const selectedLoad = selectedLoadKey
     ? ([...cabinLoads, ...sensorDevices].find(
         (load) => load.key === selectedLoadKey,
@@ -2005,8 +2018,8 @@ export default function Home() {
     if (load.key === 'climate') {
       return targetState.on
         ? {
-            en: `Set to ${controlTextFor(String(controls.mode), 'en')} · ${controls.target}°C · ${controlTextFor(String(controls.fan), 'en')} fan`,
-            zh: `切换至${controlTextFor(String(controls.mode), 'zh')}模式 · ${controls.target}°C · ${controlTextFor(String(controls.fan), 'zh')}风`,
+            en: `Set to ${controlTextFor(String(controls.mode), 'en')} · ${controls.target}°F · ${controlTextFor(String(controls.fan), 'en')} fan`,
+            zh: `切换至${controlTextFor(String(controls.mode), 'zh')}模式 · ${controls.target}°F · ${controlTextFor(String(controls.fan), 'zh')}风`,
           }
         : { en: 'Turned off', zh: '关闭空调' };
     }
@@ -2155,24 +2168,24 @@ export default function Home() {
   ): Localized {
     const labels: Record<string, Localized> = {
       brightness: { en: 'Brightness', zh: '亮度' },
-      colorTemperature: { en: 'Color temperature', zh: '色温' },
+      colorTemperature: { en: 'Color Temperature', zh: '色温' },
       mode: { en: 'Mode', zh: '模式' },
       target: { en: 'Temperature', zh: '温度' },
       fan: { en: 'Fan', zh: '风速' },
-      position: { en: 'Open position', zh: '开合度' },
-      targetHumidity: { en: 'Target humidity', zh: '目标湿度' },
+      position: { en: 'Open Position', zh: '开合度' },
+      targetHumidity: { en: 'Target Humidity', zh: '目标湿度' },
       volume: { en: 'Volume', zh: '音量' },
-      profile: { en: 'Sound profile', zh: '声场模式' },
-      source: { en: 'Input source', zh: '输入源' },
-      picture: { en: 'Picture preset', zh: '画面模式' },
+      profile: { en: 'Sound Profile', zh: '声场模式' },
+      source: { en: 'Input Source', zh: '输入源' },
+      picture: { en: 'Picture Preset', zh: '画面模式' },
       program: { en: 'Program', zh: '程序' },
       power: { en: 'Power', zh: '功率' },
       timer: { en: 'Timer', zh: '定时' },
-      outputLimit: { en: 'Output limit', zh: '输出上限' },
+      outputLimit: { en: 'Output Limit', zh: '输出上限' },
       color: { en: 'Color', zh: '颜色' },
-      autoLock: { en: 'Auto lock', zh: '自动上锁' },
-      childLock: { en: 'Child lock', zh: '童锁' },
-      safetyLock: { en: 'Safety lock', zh: '安全锁' },
+      autoLock: { en: 'Auto Lock', zh: '自动上锁' },
+      childLock: { en: 'Child Lock', zh: '童锁' },
+      safetyLock: { en: 'Safety Lock', zh: '安全锁' },
     };
     const label = labels[field] ?? { en: 'Setting', zh: '设置' };
     const unit =
@@ -2182,7 +2195,7 @@ export default function Home() {
       field === 'volume'
         ? '%'
         : field === 'target'
-          ? '°C'
+          ? '°F'
           : field === 'colorTemperature'
             ? 'K'
             : field === 'power' || field === 'outputLimit'
@@ -2251,11 +2264,11 @@ export default function Home() {
       addDeviceLog(
         `scene-mode-${key}`,
         {
-          en: `${scenes[key].name.en} scene`,
+          en: `${scenes[key].name.en} Mode`,
           zh: `${scenes[key].name.zh}场景`,
         },
         {
-          en: `${sceneActions.length} device actions completed`,
+          en: `${sceneActions.length} Actions Performed`,
           zh: `已执行${sceneActions.length}项设备联动`,
         },
         scenes[key].time,
@@ -2284,7 +2297,7 @@ export default function Home() {
     addDeviceLog(
       'system-reset',
       { en: 'System', zh: '系统' },
-      { en: 'Scene defaults restored', zh: '已恢复场景初始设置' },
+      { en: 'Mode Defaults Restored', zh: '已恢复场景初始设置' },
     );
   }
 
@@ -2506,9 +2519,9 @@ export default function Home() {
                     <span className="eyebrow">
                       {locale === 'en' ? 'ENERGY SYSTEM' : '能源系统'}
                     </span>
-                    <h2>{locale === 'en' ? 'Energy flow' : '能量流'}</h2>
+                    <h2>{locale === 'en' ? 'Energy Flow' : '能量流'}</h2>
                     <span className="readonly-note">
-                      {locale === 'en' ? 'View only' : '仅展示'}
+                      {locale === 'en' ? 'View Only' : '仅展示'}
                     </span>
                   </div>
                   <span
@@ -2517,7 +2530,7 @@ export default function Home() {
                     <CircleDot aria-hidden="true" />{' '}
                     {kitchenLoadWatts > 0
                       ? locale === 'en'
-                        ? 'Load management active'
+                        ? 'Load Management Active'
                         : '负载调度中'
                       : locale === 'en'
                         ? 'Healthy'
@@ -2589,8 +2602,8 @@ export default function Home() {
                     label={
                       locale === 'en'
                         ? batteryIsCharging
-                          ? 'Battery charging'
-                          : 'Battery discharge'
+                          ? 'Battery Charging'
+                          : 'Battery Discharge'
                         : batteryIsCharging
                           ? '电池充电'
                           : '电池放电'
@@ -2600,7 +2613,7 @@ export default function Home() {
                   />
                   <Metric
                     icon={Power}
-                    label={locale === 'en' ? 'RV load' : '房车负载'}
+                    label={locale === 'en' ? 'Load' : '房车负载'}
                     value={rvLoadValue}
                     tone="violet"
                   />
@@ -2616,7 +2629,7 @@ export default function Home() {
                 <div className="forecast-card">
                   <div className="forecast-copy">
                     <span>
-                      {locale === 'en' ? 'Estimated runtime' : '预计续航时间'}
+                      {locale === 'en' ? 'Estimated Runtime' : '预计续航时间'}
                     </span>
                     <strong>{estimatedRuntime}</strong>
                   </div>
@@ -2674,7 +2687,7 @@ export default function Home() {
                         ? `Kitchen +${kitchenLoadWatts} W · ${batteryFlowLabel} ${batteryFlowPower}`
                         : `厨房 +${kitchenLoadWatts} W · 电池${batteryFlowLabel} ${batteryFlowPower}`
                       : locale === 'en'
-                        ? 'Optimized for this stay'
+                        ? 'Optimized for This Stay'
                         : '已为本次驻留优化'}
                   </div>
                 </div>
@@ -2905,7 +2918,7 @@ export default function Home() {
                     <span className="device-interaction-hint">
                       <Hand aria-hidden="true" />
                       {locale === 'en'
-                        ? 'Tap a device to adjust'
+                        ? 'Tap a Device to Adjust'
                         : '点击设备即可调节'}
                       <ChevronRight aria-hidden="true" />
                     </span>
@@ -2919,7 +2932,7 @@ export default function Home() {
                     {temperatureSensor.on
                       ? pick(temperatureSensor.value)
                       : locale === 'en'
-                        ? 'Temperature offline'
+                        ? 'Temperature Offline'
                         : '温度传感器离线'}
                   </span>
                   <span className={airSensor.on ? '' : 'is-offline'}>
@@ -2927,7 +2940,7 @@ export default function Home() {
                     {airSensor.on
                       ? pick(airSensor.value)
                       : locale === 'en'
-                        ? 'Air sensor offline'
+                        ? 'Air Sensor Offline'
                         : '空气传感器离线'}
                   </span>
                   <span className={noiseSensor.on ? '' : 'is-offline'}>
@@ -2935,14 +2948,14 @@ export default function Home() {
                     {noiseSensor.on
                       ? pick(noiseSensor.value)
                       : locale === 'en'
-                        ? 'Noise sensor offline'
+                        ? 'Noise Sensor Offline'
                         : '噪声传感器离线'}
                   </span>
                 </div>
                 <div className="hero-interaction-canvas">
                   <fieldset className="vehicle-load-layer">
                     <legend className="sr-only">
-                      {locale === 'en' ? 'RV device controls' : '房车负载控制'}
+                      {locale === 'en' ? 'RV Device Controls' : '房车负载控制'}
                     </legend>
                     {cabinLoads.map((load) => {
                       const LoadIcon = load.icon;
@@ -2957,7 +2970,7 @@ export default function Home() {
                             setSelectedLoadKey(load.key);
                             setLoadSheetOpen(true);
                           }}
-                          aria-label={`${pick(load.name)}: ${pick(state.value)} · ${locale === 'en' ? 'Edit device settings' : '编辑设备设置'}`}
+                          aria-label={`${pick(load.name)}: ${pick(state.value)} · ${locale === 'en' ? 'Edit Device Settings' : '编辑设备设置'}`}
                         >
                           <span
                             className="actual-device-marker"
@@ -2988,7 +3001,7 @@ export default function Home() {
                     </small>
                     <strong>
                       {locale === 'en'
-                        ? 'Status change log'
+                        ? 'Status Change Log'
                         : '设备状态变更日志'}
                     </strong>
                   </div>
@@ -2997,7 +3010,7 @@ export default function Home() {
                     aria-live="polite"
                     aria-label={
                       locale === 'en'
-                        ? 'Recent device status changes'
+                        ? 'Recent Device Status Changes'
                         : '最近设备状态变更'
                     }
                   >
@@ -3019,7 +3032,7 @@ export default function Home() {
                     onClick={() => setLogDialogOpen(true)}
                   >
                     <span>
-                      {locale === 'en' ? 'View all logs' : '查看全部日志'}
+                      {locale === 'en' ? 'View All Logs' : '查看全部日志'}
                     </span>
                     <ChevronRight aria-hidden="true" />
                   </button>
@@ -3051,7 +3064,7 @@ export default function Home() {
                       {securityPanelActive
                         ? locale === 'en'
                           ? sentryCameraOn
-                            ? '360° SENTRY'
+                            ? '360 SENTRY GUARD'
                             : 'CABIN CAMERA'
                           : sentryCameraOn
                             ? '360° 哨兵守护'
@@ -3065,12 +3078,12 @@ export default function Home() {
                         ? locale === 'en'
                           ? sentryCameraOn
                             ? 'Security'
-                            : 'Cabin monitoring'
+                            : 'Cabin Monitoring'
                           : sentryCameraOn
                             ? '安防'
                             : '车内监控'
                         : locale === 'en'
-                          ? 'Cabin systems'
+                          ? 'Cabin Systems'
                           : '舱内系统'}
                     </h2>
                   </div>
@@ -3098,7 +3111,7 @@ export default function Home() {
                           role="tablist"
                           aria-label={
                             locale === 'en'
-                              ? 'Security camera area'
+                              ? 'Security Camera Area'
                               : '安防摄像头区域'
                           }
                         >
@@ -3107,7 +3120,7 @@ export default function Home() {
                             role="tab"
                             aria-label={
                               locale === 'en'
-                                ? 'Show exterior camera feeds'
+                                ? 'Show Exterior Camera Feeds'
                                 : '查看车外摄像头画面'
                             }
                             aria-selected={activeSecurityView === 'exterior'}
@@ -3126,7 +3139,7 @@ export default function Home() {
                             role="tab"
                             aria-label={
                               locale === 'en'
-                                ? 'Show interior camera feed'
+                                ? 'Show Interior Camera Feed'
                                 : '查看车内摄像头画面'
                             }
                             aria-selected={activeSecurityView === 'interior'}
@@ -3152,19 +3165,19 @@ export default function Home() {
                             <strong>
                               {activeSecurityView === 'exterior'
                                 ? locale === 'en'
-                                  ? 'Side-view mirror camera'
+                                  ? 'Side-View Mirror Camera'
                                   : '外后视镜摄像头'
                                 : locale === 'en'
-                                  ? 'Cabin camera'
+                                  ? 'Cabin Camera'
                                   : '车内摄像头'}
                             </strong>
                             <small>
                               {activeSecurityView === 'exterior'
                                 ? locale === 'en'
-                                  ? 'Controls four exterior feeds and Sentry Mode'
+                                  ? 'Controls Four Exterior Feeds and Sentry Mode'
                                   : '控制车外四路画面与哨兵模式'
                                 : locale === 'en'
-                                  ? 'Controls the interior live view'
+                                  ? 'Controls the Interior Live View'
                                   : '控制车内实时画面'}
                             </small>
                           </span>
@@ -3176,7 +3189,7 @@ export default function Home() {
                           className="sentry-camera-wall"
                           aria-label={
                             locale === 'en'
-                              ? 'Four live cameras providing complete perimeter coverage'
+                              ? 'Four Live Cameras Providing Complete Perimeter Coverage'
                               : '四路实时摄像头，全方位覆盖房车周界'
                           }
                         >
@@ -3189,7 +3202,7 @@ export default function Home() {
                                 type="button"
                                 key={camera.id}
                                 onClick={() => setSelectedCameraId(camera.id)}
-                                aria-label={`${locale === 'en' ? camera.label.en : camera.label.zh} · ${locale === 'en' ? 'Open enlarged live camera view' : '打开实时监控大画面'}`}
+                                aria-label={`${locale === 'en' ? camera.label.en : camera.label.zh} · ${locale === 'en' ? 'Open Enlarged Live Camera View' : '打开实时监控大画面'}`}
                               >
                                 <Image
                                   className="sentry-camera-image"
@@ -3256,7 +3269,7 @@ export default function Home() {
                           className="sentry-camera-wall is-interior"
                           aria-label={
                             locale === 'en'
-                              ? 'Live interior cabin camera'
+                              ? 'Live Interior Cabin Camera'
                               : '车内实时摄像头画面'
                           }
                         >
@@ -3265,7 +3278,7 @@ export default function Home() {
                             type="button"
                             style={interiorCameraLightingStyle}
                             onClick={() => setSelectedCameraId(indoorCamera.id)}
-                            aria-label={`${locale === 'en' ? indoorCamera.label.en : indoorCamera.label.zh} · ${locale === 'en' ? 'Open enlarged live camera view' : '打开实时监控大画面'}`}
+                            aria-label={`${locale === 'en' ? indoorCamera.label.en : indoorCamera.label.zh} · ${locale === 'en' ? 'Open Enlarged Live Camera View' : '打开实时监控大画面'}`}
                           >
                             <Image
                               className="sentry-interior-image"
@@ -3336,7 +3349,7 @@ export default function Home() {
                           </div>
                           <div className="readonly-note">
                             {locale === 'en'
-                              ? 'The side-view mirror camera controls exterior Sentry Mode'
+                              ? 'The side-view mirror cameras provide exterior video for sentry mode.'
                               : '外后视镜摄像头负责车外画面与哨兵模式'}
                           </div>
                           <div className="security-grid">
@@ -3394,10 +3407,10 @@ export default function Home() {
                             )}
                             {intrusion
                               ? locale === 'en'
-                                ? 'Resolve demo alert'
+                                ? 'Resolve Demo Alert'
                                 : '解除演示警报'
                               : locale === 'en'
-                                ? 'Tap to simulate motion'
+                                ? 'Tap to Simulate Motion'
                                 : '点击模拟移动入侵'}
                             <ChevronRight aria-hidden="true" />
                           </button>
@@ -3408,12 +3421,12 @@ export default function Home() {
                           <span>
                             <strong>
                               {locale === 'en'
-                                ? 'Cabin camera live'
+                            ? 'Cabin Camera Live'
                                 : '车内画面已开启'}
                             </strong>
                             <small>
                               {locale === 'en'
-                                ? 'Interior view only · Exterior Sentry Mode is off'
+                                ? 'Interior View Only · Exterior Sentry Mode Is Off'
                                 : '仅显示车内画面 · 车外哨兵模式未开启'}
                             </small>
                           </span>
@@ -3426,7 +3439,7 @@ export default function Home() {
                         <Power aria-hidden="true" />
                         <span>
                           {locale === 'en'
-                            ? `View all ${cabinLoads.length + sensorDevices.length} devices`
+                            ? `View All ${cabinLoads.length + sensorDevices.length} Devices`
                             : `查看全部${cabinLoads.length + sensorDevices.length}项设备`}
                         </span>
                         <ChevronRight aria-hidden="true" />
@@ -3437,13 +3450,13 @@ export default function Home() {
                       <div className="climate-card">
                         <div>
                           <span>
-                            {locale === 'en' ? 'Interior climate' : '舱内环境'}
+                            {locale === 'en' ? 'Interior Climate' : '舱内环境'}
                           </span>
                           <strong>
                             {temperatureSensor.on ? temperatureReading : '--'}
                             <small>
                               {temperatureSensor.on
-                                ? '°C'
+                                ? '°F'
                                 : locale === 'en'
                                   ? 'OFFLINE'
                                   : '离线'}
@@ -3474,7 +3487,7 @@ export default function Home() {
                       <div className="active-load-heading">
                         <span>
                           {locale === 'en'
-                            ? 'Device status · View only'
+                            ? 'Device Status · View Only'
                             : '设备状态 · 仅展示'}
                         </span>
                         <strong>{activeLoads.length}</strong>
@@ -3517,7 +3530,7 @@ export default function Home() {
                         <Power aria-hidden="true" />
                         <span>
                           {locale === 'en'
-                            ? `View all ${cabinLoads.length + sensorDevices.length} devices`
+                            ? `View All ${cabinLoads.length + sensorDevices.length} Devices`
                             : `查看全部${cabinLoads.length + sensorDevices.length}项设备`}
                         </span>
                         <ChevronRight aria-hidden="true" />
@@ -3545,7 +3558,7 @@ export default function Home() {
                     <span>{aiSummary}</span>
                     <b>
                       {locale === 'en'
-                        ? 'View personal energy plan'
+                        ? 'View Personal Energy Plan'
                         : '查看个人能源计划'}{' '}
                       <ChevronRight aria-hidden="true" />
                     </b>
@@ -3556,15 +3569,15 @@ export default function Home() {
 
             <nav
               className="scene-dock"
-              aria-label={locale === 'en' ? 'RV scenes' : '房车场景'}
+              aria-label={locale === 'en' ? 'RV modes' : '房车场景'}
             >
               <div className="scene-intro">
                 <span className="eyebrow">
-                  {locale === 'en' ? 'ONE-TOUCH SCENES' : '一键场景'}
+                  {locale === 'en' ? 'ONE-TOUCH MODE' : '一键场景'}
                 </span>
                 <strong>
                   {locale === 'en'
-                    ? 'Tap a scene to begin'
+                    ? 'Tap a mode to start'
                     : '点击场景，一键联动'}
                 </strong>
               </div>
@@ -3597,7 +3610,7 @@ export default function Home() {
                                 ? 'Active'
                                 : '当前场景'
                               : locale === 'en'
-                                ? 'Tap to activate'
+                                ? 'Tap to Activate'
                                 : '点击切换'}
                         </small>
                       </span>
@@ -3630,12 +3643,12 @@ export default function Home() {
               >
                 <ScanLine aria-hidden="true" />
                 <div>
-                  <strong>{locale === 'en' ? 'Checkup' : '系统体检'}</strong>
+                  <strong>{locale === 'en' ? 'Diagnostics' : '系统体检'}</strong>
                   <small>
                     {healthResultIsFresh
                       ? pick(activeHealthTitle)
                       : locale === 'en'
-                        ? 'Tap to check energy configuration'
+                        ? 'System Config'
                         : '点击检查能源配置'}
                   </small>
                 </div>
@@ -3668,7 +3681,7 @@ export default function Home() {
                     onClick={() => setSelectedLoadKey(null)}
                   >
                     <ArrowLeft aria-hidden="true" />
-                    {locale === 'en' ? 'All devices' : '全部设备'}
+                    {locale === 'en' ? 'All Devices' : '全部设备'}
                   </button>
                 )}
                 <span className="eyebrow">
@@ -3681,7 +3694,7 @@ export default function Home() {
                         ? 'DEVICE CONTROL'
                         : '设备控制'
                     : locale === 'en'
-                      ? 'LIVE SCENE STATUS'
+                      ? 'LIVE MODE STATUS'
                       : '当前场景状态'}
                 </span>
                 <SheetTitle>
@@ -3691,7 +3704,7 @@ export default function Home() {
                     <>
                       {pick(current.name)}{' '}
                       {locale === 'en'
-                        ? 'Mode · All devices'
+                        ? 'Mode · All Devices'
                         : '模式 · 全部设备'}
                     </>
                   )}
@@ -3700,10 +3713,10 @@ export default function Home() {
                   {selectedLoad
                     ? selectedLoad.kind === 'sensor'
                       ? locale === 'en'
-                        ? 'Always-on sensing device · Read-only monitoring'
+                        ? 'Always-On Sensing Device · Read-Only Monitoring'
                         : '常驻感知设备 · 仅支持查看监测数据'
                       : locale === 'en'
-                        ? 'Adjust this device without leaving the current scene'
+                        ? 'Adjust this device without leaving the current mode'
                         : '调整设备后将立即回写当前场景'
                     : locale === 'en'
                       ? `${cabinLoads.length} loads · ${onlineSensorCount}/${sensorDevices.length} sensors online · Select a device for controls`
@@ -3713,7 +3726,7 @@ export default function Home() {
               <SheetClose
                 className="sheet-close-button"
                 aria-label={
-                  locale === 'en' ? 'Close device status' : '关闭设备状态'
+                  locale === 'en' ? 'Close Device Status' : '关闭设备状态'
                 }
               >
                 <X aria-hidden="true" />
@@ -3723,7 +3736,7 @@ export default function Home() {
               <p className="sheet-interaction-hint">
                 <Hand aria-hidden="true" />
                 {locale === 'en'
-                  ? 'Tap a device for settings · Use its switch for quick control · Sensors are view only'
+                  ? 'Tap a Device for Settings · Use Its Toggle for Quick Control · Sensors Are View Only'
                   : '点击设备调节参数 · 拨动开关快捷操作 · 传感器仅查看数据'}
               </p>
             )}
@@ -3744,7 +3757,7 @@ export default function Home() {
                 className="sheet-load-grid"
                 aria-label={
                   locale === 'en'
-                    ? 'All RV device controls'
+                    ? 'All RV Device Controls'
                     : '全部房车设备控制'
                 }
               >
@@ -3819,7 +3832,7 @@ export default function Home() {
                             checked={state.on}
                             disabled={quickControlLocked}
                             onCheckedChange={() => toggleLoad(load)}
-                            aria-label={`${locale === 'en' ? 'Quick control' : '快捷控制'} · ${pick(load.name)} · ${quickStateLabel}${quickControlLocked ? ` · ${locale === 'en' ? 'Open settings to unlock' : '请进入设置解锁'}` : ''}`}
+                            aria-label={`${locale === 'en' ? 'Quick Control' : '快捷控制'} · ${pick(load.name)} · ${quickStateLabel}${quickControlLocked ? ` · ${locale === 'en' ? 'Open Settings to Unlock' : '请进入设置解锁'}` : ''}`}
                           />
                         </div>
                       )}
@@ -3840,7 +3853,7 @@ export default function Home() {
               </span>
               <DialogTitle>
                 {locale === 'en'
-                  ? 'Complete device status change log'
+                  ? 'Complete Device Status Change Log'
                   : '全部设备状态变更日志'}
               </DialogTitle>
               <DialogDescription>
@@ -3851,7 +3864,7 @@ export default function Home() {
             </div>
             <DialogClose
               className="device-log-dialog-close"
-              aria-label={locale === 'en' ? 'Close logs' : '关闭日志'}
+              aria-label={locale === 'en' ? 'Close Logs' : '关闭日志'}
             >
               <X aria-hidden="true" />
             </DialogClose>
@@ -3860,7 +3873,7 @@ export default function Home() {
             className="device-log-history"
             aria-label={
               locale === 'en'
-                ? 'Complete device status change history'
+                ? 'Complete Device Status Change History'
                 : '完整设备状态变更记录'
             }
           >
@@ -3884,7 +3897,7 @@ export default function Home() {
                     className="scene-log-actions"
                     aria-label={
                       locale === 'en'
-                        ? `${pick(entry.device)} device actions`
+                        ? `${pick(entry.device)} Device Actions`
                         : `${pick(entry.device)}设备联动明细`
                     }
                   >
@@ -3919,18 +3932,18 @@ export default function Home() {
                   : 'RENOGY 系统诊断'}
               </span>
               <DialogTitle>
-                {locale === 'en' ? 'Energy system checkup' : '系统体检'}
+                {locale === 'en' ? 'System Health Check' : '系统体检'}
               </DialogTitle>
               <DialogDescription>
                 {locale === 'en'
-                  ? 'Check the current power supply, energy storage, loads and scene automation.'
+                  ? 'Check the current power supply, energy storage, loads and mode automation configurations.'
                   : '检查当前供电、储能、负载与场景联动配置。'}
               </DialogDescription>
             </div>
             <DialogClose
               className="efficiency-close"
               aria-label={
-                locale === 'en' ? 'Close system checkup' : '关闭系统体检'
+                locale === 'en' ? 'Close System Checkup' : '关闭系统体检'
               }
             >
               <X aria-hidden="true" />
@@ -3946,7 +3959,7 @@ export default function Home() {
                 <span>{locale === 'en' ? 'CHECKING' : '正在体检'}</span>
                 <h3>
                   {locale === 'en'
-                    ? 'Analyzing your energy configuration'
+                    ? 'Analyzing Your Energy Configuration'
                     : '正在分析系统能源配置'}
                 </h3>
                 <p>
@@ -3989,14 +4002,9 @@ export default function Home() {
                   </span>
                   <h3>{pick(selectedHealthTitle)}</h3>
                   <p>
-                    {selectedHealthLevel === 'urgent'
-                      ? hasAwaySecurityGap
-                        ? locale === 'en'
-                          ? 'Away protection is incomplete. Restore the required interior and exterior cameras immediately.'
-                          : '外出防护已不完整，请立即恢复必需的车内外摄像头。'
-                        : locale === 'en'
-                          ? 'A power conflict or overload has been detected. Resolve the affected device configuration before continued use.'
-                          : '检测到供电冲突或负载过载，请先处理相关设备配置再继续使用。'
+                    {selectedHealthLevel === 'urgent' &&
+                    urgentHealthDiagnostic
+                      ? pick(urgentHealthDiagnostic.impact)
                       : pick(dynamicHealthExplanation)}
                   </p>
                   <div className="health-result-meta">
@@ -4030,11 +4038,11 @@ export default function Home() {
                       {locale === 'en' ? 'DIAGNOSTIC RESULTS' : '诊断结果'}
                     </span>
                     <h3 id="efficiency-breakdown-title">
-                      {locale === 'en' ? 'Diagnostic checks' : '体检项目'}
+                      {locale === 'en' ? 'Diagnostic Checks' : '体检项目'}
                     </h3>
                   </div>
                   <small>
-                    {locale === 'en' ? '5 checks completed' : '已完成5项检查'}
+                    {locale === 'en' ? '5 Checks Completed' : '已完成5项检查'}
                   </small>
                 </div>
                 <div className="efficiency-factor-grid health-factor-grid">
@@ -4059,14 +4067,14 @@ export default function Home() {
                           <strong>
                             {diagnostic.level === 'excellent'
                               ? locale === 'en'
-                                ? 'Normal'
+                                ? 'Good'
                                 : '正常'
                               : diagnostic.level === 'improve'
                                 ? locale === 'en'
-                                  ? 'Improve'
+                                  ? 'Need Improvement'
                                   : '可优化'
                                 : locale === 'en'
-                                  ? 'Fix now'
+                                  ? 'Fix Now'
                                   : '立即处理'}
                           </strong>
                         </div>
@@ -4080,7 +4088,7 @@ export default function Home() {
                           {actionable ? (
                             <>
                               {locale === 'en'
-                                ? 'View affected devices'
+                                ? 'View Affected Devices'
                                 : '查看设备详情'}
                               <ChevronRight aria-hidden="true" />
                             </>
@@ -4121,7 +4129,7 @@ export default function Home() {
                       type="button"
                       aria-label={
                         locale === 'en'
-                          ? 'Close diagnostic detail'
+                          ? 'Close Diagnostic Detail'
                           : '收起诊断详情'
                       }
                       onClick={() => setSelectedHealthCheckId(null)}
@@ -4131,26 +4139,26 @@ export default function Home() {
                   </div>
                   <div className="health-issue-device">
                     <span>
-                      {locale === 'en' ? 'Affected devices' : '受影响设备'}
+                      {locale === 'en' ? 'Affected Devices' : '受影响设备'}
                     </span>
                     <strong>{pick(selectedHealthDiagnostic.device)}</strong>
                   </div>
                   <div className="health-issue-facts">
                     <div>
                       <span>
-                        {locale === 'en' ? 'Current condition' : '当前情况'}
+                        {locale === 'en' ? 'Current Condition' : '当前情况'}
                       </span>
                       <p>{pick(selectedHealthDiagnostic.observed)}</p>
                     </div>
                     <div>
                       <span>
-                        {locale === 'en' ? 'System impact' : '系统影响'}
+                        {locale === 'en' ? 'System Impact' : '系统影响'}
                       </span>
                       <p>{pick(selectedHealthDiagnostic.impact)}</p>
                     </div>
                     <div className="health-issue-recommendation">
                       <span>
-                        {locale === 'en' ? 'Recommended action' : '处理建议'}
+                        {locale === 'en' ? 'Recommended Action' : '处理建议'}
                       </span>
                       <p>{pick(selectedHealthDiagnostic.recommendation)}</p>
                     </div>
@@ -4209,7 +4217,7 @@ export default function Home() {
                   onClick={() => setHealthCheckPhase('scanning')}
                 >
                   <ScanLine aria-hidden="true" />
-                  {locale === 'en' ? 'Check again' : '重新体检'}
+                  {locale === 'en' ? 'Check Again' : '重新体检'}
                 </button>
               </div>
             </>
@@ -4227,7 +4235,7 @@ export default function Home() {
               </span>
               <DialogTitle>
                 {locale === 'en'
-                  ? 'Your personal energy outlook'
+                  ? 'Your Personal Energy Forecast'
                   : '你的个人能源预测'}
               </DialogTitle>
               <DialogDescription>
@@ -4239,7 +4247,7 @@ export default function Home() {
             <DialogClose
               className="efficiency-close"
               aria-label={
-                locale === 'en' ? 'Close AI energy plan' : '关闭AI能源计划'
+                locale === 'en' ? 'Close AI Energy Plan' : '关闭AI能源计划'
               }
             >
               <X aria-hidden="true" />
@@ -4261,11 +4269,11 @@ export default function Home() {
             <h3>{aiSummary}</h3>
             <div className="ai-plan-numbers">
               <span>
-                <small>{locale === 'en' ? 'Usable battery' : '可用电量'}</small>
+                <small>{locale === 'en' ? 'Usable Battery' : '可用电量'}</small>
                 <strong>{remainingBatteryKwh.toFixed(1)} kWh</strong>
               </span>
               <span>
-                <small>{locale === 'en' ? 'Typical day' : '日常用能'}</small>
+                <small>{locale === 'en' ? 'Typical Day' : '日常用能'}</small>
                 <strong>{habitEnergy.daily.toFixed(1)} kWh</strong>
               </span>
               <span>
@@ -4287,13 +4295,13 @@ export default function Home() {
                 </span>
                 <h3 id="ai-capacity-title">
                   {locale === 'en'
-                    ? 'What your remaining battery can support'
+                    ? 'What Your Remaining Battery Can Support'
                     : '剩余电量可支持'}
                 </h3>
               </div>
               <small>
                 {locale === 'en'
-                  ? 'Each estimate shown separately'
+                  ? 'Each Estimate Shown Separately'
                   : '各项为独立估算'}
               </small>
             </div>
@@ -4306,7 +4314,7 @@ export default function Home() {
                 </span>
                 <p>
                   {locale === 'en'
-                    ? 'Daily meal preparation estimate'
+                    ? 'Daily Meal Preparation Estimate'
                     : '日常备餐用能估算'}
                 </p>
               </article>
@@ -4330,7 +4338,7 @@ export default function Home() {
                 </span>
                 <p>
                   {locale === 'en'
-                    ? 'Air conditioner + humidifier + security'
+                    ? 'Air Conditioner + Humidifier + Security'
                     : '空调、加湿与夜间安防'}
                 </p>
               </article>
@@ -4342,7 +4350,7 @@ export default function Home() {
                 </span>
                 <p>
                   {locale === 'en'
-                    ? 'Your complete daily routine'
+                    ? 'Your Complete Daily Routine'
                     : '完整日常用能习惯'}
                 </p>
               </article>
@@ -4383,7 +4391,7 @@ export default function Home() {
           </section>
           <p className="efficiency-model-note">
             {locale === 'en'
-              ? 'AI estimates use simulated 14-day behavior, current device states and demo energy data. Activity estimates are alternatives, not cumulative.'
+              ? 'AI estimates use simulated 14-day behavior, current device states and demo energy data. Activity estimates are individual, not cumulative.'
               : 'AI估算基于模拟的14天使用习惯、当前设备状态与演示能源数据；各活动数量为分别估算，不可累加。'}
           </p>
         </DialogContent>
@@ -4427,7 +4435,7 @@ export default function Home() {
                 <DialogClose
                   className="efficiency-close"
                   aria-label={
-                    locale === 'en' ? 'Close camera view' : '关闭摄像头画面'
+                    locale === 'en' ? 'Close Camera View' : '关闭摄像头画面'
                   }
                 >
                   <X aria-hidden="true" />
@@ -4507,10 +4515,10 @@ export default function Home() {
                   <span>
                     {selectedCamera.scope === 'interior'
                       ? locale === 'en'
-                        ? 'Cabin camera'
+                        ? 'Cabin Camera'
                         : '车内摄像头'
                       : locale === 'en'
-                        ? 'Right side-view mirror camera'
+                        ? 'Right Side-View Mirror Camera'
                         : '右侧外后视镜摄像头'}
                   </span>
                 </div>
@@ -4518,7 +4526,7 @@ export default function Home() {
               <div className="camera-dialog-status">
                 <span>
                   <Radio aria-hidden="true" />
-                  {locale === 'en' ? 'Live stream' : '实时画面'}
+                  {locale === 'en' ? 'Live Stream' : '实时画面'}
                 </span>
                 <span>
                   <Camera aria-hidden="true" />
@@ -4532,7 +4540,7 @@ export default function Home() {
                 </span>
                 <span>
                   <ShieldCheck aria-hidden="true" />
-                  {locale === 'en' ? 'Continuous recording' : '持续录像'}
+                  {locale === 'en' ? 'Continuous Recording' : '持续录像'}
                 </span>
               </div>
             </>
@@ -4571,10 +4579,10 @@ function DeviceControlPanel({
     const sensorMetrics =
       device.key === 'temperature-sensor'
         ? [
-            [t('Current reading', '当前温度'), state.value[locale]],
-            [t('Accuracy', '测量精度'), '±0.3°C'],
+            [t('Current Reading', '当前温度'), state.value[locale]],
+            [t('Accuracy', '测量精度'), '±0.5°F'],
             [t('Sampling', '采样周期'), t('Every 5 seconds', '每 5 秒')],
-            [t('Installed at', '安装位置'), t('Cabin ceiling', '舱内顶部')],
+            [t('Installed At', '安装位置'), t('Cabin Ceiling', '舱内顶部')],
           ]
         : device.key === 'air-sensor'
           ? [
@@ -4589,10 +4597,10 @@ function DeviceControlPanel({
               [t('Sampling', '采样周期'), t('Every 10 seconds', '每 10 秒')],
             ]
           : [
-              [t('Current level', '当前噪声'), state.value[locale]],
+              [t('Current Level', '当前噪声'), state.value[locale]],
               [t('15-minute average', '15 分钟平均值'), '25 dB'],
               [t('Peak', '峰值'), '38 dB'],
-              [t('Privacy', '隐私模式'), t('No audio stored', '不保存录音')],
+              [t('Privacy', '隐私模式'), t('No Audio Stored', '不保存录音')],
             ];
     return (
       <section
@@ -4626,9 +4634,9 @@ function DeviceControlPanel({
         <div className="sensor-readonly-note">
           <ShieldCheck aria-hidden="true" />
           <span>
-            <strong>{t('Always-on sensing', '常驻感知')}</strong>
+            <strong>{t('Always-On Sensing', '常驻感知')}</strong>
             {t(
-              'This sensor cannot be switched off from a scene. Maintenance and calibration are managed at system level.',
+              'This sensor cannot be switched off from a mode. Maintenance and calibration are managed at system level.',
               '传感器不支持在场景中关闭，维护与校准由系统级统一管理。',
             )}
           </span>
@@ -4643,22 +4651,22 @@ function DeviceControlPanel({
         return (
           <>
             <SegmentedControl
-              label={t('Operating mode', '运行模式')}
+              label={t('Operating Mode', '运行模式')}
               options={['Auto', 'Cool', 'Fan', 'Sleep']}
               value={stringValue('mode', 'Auto')}
               locale={locale}
               onChange={(value) => onUpdate('mode', value)}
             />
             <RangeControl
-              label={t('Target temperature', '目标温度')}
-              value={numberValue('target', 23)}
-              min={16}
-              max={30}
-              unit="°C"
+              label={t('Target Temperature', '目标温度')}
+              value={numberValue('target', 73)}
+              min={61}
+              max={86}
+              unit="°F"
               onChange={(value) => onUpdate('target', value)}
             />
             <SegmentedControl
-              label={t('Fan speed', '风速')}
+              label={t('Fan Speed', '风速')}
               options={['Auto', 'Low', 'Medium', 'High']}
               value={stringValue('fan', 'Auto')}
               locale={locale}
@@ -4682,7 +4690,7 @@ function DeviceControlPanel({
           <>
             <div className="control-group">
               <span className="control-label">
-                {t('Quick position', '快捷位置')}
+                {t('Quick Position', '快捷位置')}
               </span>
               <div className="control-actions">
                 <button
@@ -4724,7 +4732,7 @@ function DeviceControlPanel({
               </div>
             </div>
             <RangeControl
-              label={t('Opening level', '开合度')}
+              label={t('Opening Level', '开合度')}
               value={numberValue('position', 0)}
               min={0}
               max={100}
@@ -4737,14 +4745,14 @@ function DeviceControlPanel({
         return (
           <>
             <SegmentedControl
-              label={t('Input source', '输入源')}
+              label={t('Input Source', '输入源')}
               options={['Streaming', 'HDMI', 'TV']}
               value={stringValue('source', 'Streaming')}
               locale={locale}
               onChange={(value) => onUpdate('source', value)}
             />
             <SegmentedControl
-              label={t('Picture preset', '画面模式')}
+              label={t('Picture Preset', '画面模式')}
               options={['Cinema', 'Standard', 'Game']}
               value={stringValue('picture', 'Standard')}
               locale={locale}
@@ -4756,14 +4764,14 @@ function DeviceControlPanel({
         return (
           <>
             <SegmentedControl
-              label={t('Cooking program', '烹饪程序')}
+              label={t('Cooking Program', '烹饪程序')}
               options={['Reheat', 'Defrost', 'Popcorn', 'Manual']}
               value={stringValue('program', 'Reheat')}
               locale={locale}
               onChange={(value) => onUpdate('program', value)}
             />
             <RangeControl
-              label={t('Microwave power', '微波功率')}
+              label={t('Microwave Power', '微波功率')}
               value={numberValue('power', 800)}
               min={200}
               max={1000}
@@ -4772,7 +4780,7 @@ function DeviceControlPanel({
               onChange={(value) => onUpdate('power', value)}
             />
             <RangeControl
-              label={t('Cook time', '加热时间')}
+              label={t('Cook Time', '加热时间')}
               value={numberValue('timer', 90)}
               min={30}
               max={600}
@@ -4782,7 +4790,7 @@ function DeviceControlPanel({
             />
             <div className="control-group">
               <span className="control-label">
-                {t('Safety lock', '安全锁')}
+                {t('Safety Lock', '安全锁')}
               </span>
               <div className="control-actions two-up">
                 <button
@@ -4806,9 +4814,9 @@ function DeviceControlPanel({
             <div className="device-safety-note">
               <ShieldCheck aria-hidden="true" />
               <span>
-                <strong>{t('Manual start required', '必须手动启动')}</strong>
+                <strong>{t('Manual Start Required', '必须手动启动')}</strong>
                 {t(
-                  'Scenes may prepare a preset or stop heating, but never start the microwave automatically. Door interlock: closed.',
+                  'Modes may prepare a preset or stop heating, but never start the microwave automatically. Door interlock: closed.',
                   '场景可准备预设或停止加热，但绝不会自动启动微波炉。门体联锁：已闭合。',
                 )}
               </span>
@@ -4819,14 +4827,14 @@ function DeviceControlPanel({
         return (
           <>
             <SegmentedControl
-              label={t('Cooking mode', '烹饪模式')}
+              label={t('Cooking Mode', '烹饪模式')}
               options={['Simmer', 'Boil', 'Fry']}
               value={stringValue('mode', 'Simmer')}
               locale={locale}
               onChange={(value) => onUpdate('mode', value)}
             />
             <RangeControl
-              label={t('Heating power', '加热功率')}
+              label={t('Heating Power', '加热功率')}
               value={numberValue('power', 600)}
               min={300}
               max={1800}
@@ -4835,7 +4843,7 @@ function DeviceControlPanel({
               onChange={(value) => onUpdate('power', value)}
             />
             <RangeControl
-              label={t('Auto-off timer', '定时关闭')}
+              label={t('Auto-Off Timer', '定时关闭')}
               value={numberValue('timer', 15)}
               min={0}
               max={60}
@@ -4844,7 +4852,7 @@ function DeviceControlPanel({
               onChange={(value) => onUpdate('timer', value)}
             />
             <div className="control-group">
-              <span className="control-label">{t('Child lock', '童锁')}</span>
+              <span className="control-label">{t('Child Lock', '童锁')}</span>
               <div className="control-actions two-up">
                 <button
                   className={controls.childLock === true ? 'is-selected' : ''}
@@ -4868,10 +4876,10 @@ function DeviceControlPanel({
               <ShieldCheck aria-hidden="true" />
               <span>
                 <strong>
-                  {t('Cookware detection active', '锅具检测已启用')}
+                  {t('Cookware Detection Active', '锅具检测已启用')}
                 </strong>
                 {t(
-                  'A scene can switch off and lock the cooktop, but heating always requires a manual start.',
+                  'A mode can switch off and lock the cooktop, but heating always requires a manual start.',
                   '场景可以关闭并锁定电磁炉，但加热始终需要用户手动启动。',
                 )}
               </span>
@@ -4882,7 +4890,7 @@ function DeviceControlPanel({
         return (
           <>
             <RangeControl
-              label={t('Target humidity', '目标湿度')}
+              label={t('Target Humidity', '目标湿度')}
               value={numberValue('targetHumidity', 48)}
               min={35}
               max={70}
@@ -4890,7 +4898,7 @@ function DeviceControlPanel({
               onChange={(value) => onUpdate('targetHumidity', value)}
             />
             <SegmentedControl
-              label={t('Humidification mode', '加湿模式')}
+              label={t('Humidification Mode', '加湿模式')}
               options={['Auto', 'Quiet', 'Boost']}
               value={stringValue('mode', 'Auto')}
               locale={locale}
@@ -4917,7 +4925,7 @@ function DeviceControlPanel({
             />
             <div className="control-group">
               <span className="control-label">
-                {t('Light color', '灯光颜色')}
+                {t('Light Color', '灯光颜色')}
               </span>
               <div className="color-presets">
                 {colors.map((color) => (
@@ -4953,7 +4961,7 @@ function DeviceControlPanel({
               onChange={(value) => onUpdate('volume', value)}
             />
             <SegmentedControl
-              label={t('Sound profile', '声场模式')}
+              label={t('Sound Profile', '声场模式')}
               options={['Immersive', 'Music', 'Night']}
               value={stringValue('profile', 'Immersive')}
               locale={locale}
@@ -4965,14 +4973,14 @@ function DeviceControlPanel({
         return (
           <>
             <SegmentedControl
-              label={t('Power strategy', '供电策略')}
+              label={t('Power Strategy', '供电策略')}
               options={['Eco', 'Balanced', 'Performance', 'Silent']}
               value={stringValue('mode', 'Balanced')}
               locale={locale}
               onChange={(value) => onUpdate('mode', value)}
             />
             <RangeControl
-              label={t('AC output limit', 'AC 输出上限')}
+              label={t('AC Output Limit', 'AC 输出上限')}
               value={numberValue('outputLimit', 1800)}
               min={300}
               max={3000}
@@ -4987,7 +4995,7 @@ function DeviceControlPanel({
           <>
             <div className="control-group">
               <span className="control-label">
-                {t('Door status', '门锁状态')}
+                {t('Door Status', '门锁状态')}
               </span>
               <div className="control-actions two-up">
                 <button
@@ -5009,7 +5017,7 @@ function DeviceControlPanel({
               </div>
             </div>
             <SegmentedControl
-              label={t('Auto-lock delay', '自动上锁延时')}
+              label={t('Auto-Lock Delay', '自动上锁延时')}
               options={['30 sec', '1 min', 'Off']}
               value={stringValue('autoLock', 'Off')}
               locale={locale}
@@ -5020,7 +5028,7 @@ function DeviceControlPanel({
       default:
         return (
           <div className="control-empty">
-            {t('No additional controls', '暂无更多控制项')}
+            {t('No Additional Controls', '暂无更多控制项')}
           </div>
         );
     }
@@ -5066,7 +5074,7 @@ function DeviceControlPanel({
           <strong aria-live="polite">{state.value[locale]}</strong>
           <span>
             {t(
-              'Changes apply immediately to this scene',
+              'Changes apply immediately to this mode',
               '修改将立即应用到当前场景',
             )}
           </span>
